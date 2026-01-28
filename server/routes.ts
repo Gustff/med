@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
+import FormData from "form-data";
 import type { Message } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -125,8 +126,7 @@ export async function registerRoutes(
       console.log("Transcribe request:", { originalName, mimeType, size: req.file.buffer.length });
       
       // Use form-data library for proper multipart encoding
-      const FormDataNode = require("form-data");
-      const formData = new FormDataNode();
+      const formData = new FormData();
       
       // Append buffer directly with proper content type
       formData.append("file", req.file.buffer, {
@@ -143,7 +143,7 @@ export async function registerRoutes(
           "Authorization": `Bearer ${LEMONFOX_API_KEY}`,
           ...formData.getHeaders(),
         },
-        body: formData,
+        body: formData as unknown as BodyInit,
       });
 
       if (!response.ok) {
