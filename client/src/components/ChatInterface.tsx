@@ -3,7 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageBubble } from "./MessageBubble";
-import { VoiceRecorder } from "./VoiceRecorder";
+import { ContinuousVoiceRecorder } from "./ContinuousVoiceRecorder";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { useToast } from "@/hooks/use-toast";
 import { RotateCcw, Volume2, VolumeX, Stethoscope } from "lucide-react";
@@ -32,7 +32,6 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
   const [sessionId, setSessionId] = useState<string>(() => 
     `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   );
-  const [shouldAutoRecord, setShouldAutoRecord] = useState(false);
   const [welcomePlayed, setWelcomePlayed] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -103,16 +102,12 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
               audio.onended = () => {
                 setIsPlayingAudio(false);
                 setPlayingMessageId(null);
-                // Start recording after welcome
-                setTimeout(() => setShouldAutoRecord(true), 500);
               };
               
               await audio.play();
             }
           } catch (error) {
             console.error("Error playing welcome:", error);
-            // Start recording anyway
-            setTimeout(() => setShouldAutoRecord(true), 1000);
           }
         })();
       }
@@ -135,8 +130,6 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
       audio.onended = () => {
         setIsPlayingAudio(false);
         setPlayingMessageId(null);
-        // Auto-start recording after audio finishes
-        setTimeout(() => setShouldAutoRecord(true), 300);
       };
 
       audio.onerror = () => {
@@ -300,7 +293,6 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
   }, [sessionId, messages, autoPlayEnabled, selectedVoice, playAudio, toast]);
 
   const handleRecordingComplete = useCallback((audioBlob: Blob) => {
-    setShouldAutoRecord(false);
     sendMessage("", audioBlob);
   }, [sendMessage]);
 
@@ -423,16 +415,12 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
             </Select>
           </div>
           
-          <VoiceRecorder
+          <ContinuousVoiceRecorder
             onRecordingComplete={handleRecordingComplete}
             isProcessing={isProcessing}
-            disabled={isPlayingAudio}
-            autoStart={shouldAutoRecord}
+            disabled={false}
+            isPlayingAudio={isPlayingAudio}
           />
-          
-          <p className="text-xs text-muted-foreground text-center mt-3">
-            {isPlayingAudio ? "Escuchando..." : shouldAutoRecord ? "Grabando..." : "Toca para hablar"}
-          </p>
         </div>
       </footer>
     </div>
