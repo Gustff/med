@@ -2,9 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
 import type { Message } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -116,26 +113,26 @@ export async function registerRoutes(
         return res.status(500).json({ error: "API key not configured" });
       }
 
-      // Write audio to temp file for reliable API upload
-      const tempDir = os.tmpdir();
-      const tempFilePath = path.join(tempDir, `audio_${Date.now()}.webm`);
+      // Determine filename and content type
+      const originalName = req.file.originalname || "audio.ogg";
+      let mimeType = req.file.mimetype || "audio/ogg";
+      let filename = originalName;
       
-      fs.writeFileSync(tempFilePath, req.file.buffer);
+      // Normalize mime type
+      if (mimeType.includes("ogg")) {
+        mimeType = "audio/ogg";
+        filename = "audio.ogg";
+      } else if (mimeType.includes("webm")) {
+        mimeType = "audio/webm";
+        filename = "audio.webm";
+      }
       
-      console.log("Transcribe request:", { 
-        tempFilePath, 
-        size: req.file.buffer.length,
-        mimetype: req.file.mimetype 
-      });
+      console.log("Transcribe:", { filename, mimeType, size: req.file.buffer.length });
       
-      // Use dynamic import for form-data
-      const FormDataLib = (await import("form-data")).default;
-      const formData = new FormDataLib();
-      
-      formData.append("file", fs.createReadStream(tempFilePath), {
-        filename: "audio.webm",
-        contentType: "audio/webm",
-      });
+      // Create File and FormData for API
+      const audioFile = new File([req.file.buffer], filename, { type: mimeType });
+      const formData = new FormData();
+      formData.append("file", audioFile);
       formData.append("model", "whisper-1");
       formData.append("language", req.body.language || "es");
       formData.append("response_format", "json");
@@ -144,17 +141,9 @@ export async function registerRoutes(
         method: "POST",
         headers: {
           "Authorization": `Bearer ${LEMONFOX_API_KEY}`,
-          ...formData.getHeaders(),
         },
-        body: formData as unknown as BodyInit,
+        body: formData,
       });
-      
-      // Clean up temp file
-      try {
-        fs.unlinkSync(tempFilePath);
-      } catch (e) {
-        // Ignore cleanup errors
-      }
 
       if (!response.ok) {
         const errorText = await response.text();

@@ -163,11 +163,13 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
       if (audioBlob) {
         const formData = new FormData();
         // Determine correct filename based on blob type
-        let filename = "recording.webm";
-        if (audioBlob.type.includes("mp4") || audioBlob.type.includes("m4a")) {
-          filename = "recording.m4a";
-        } else if (audioBlob.type.includes("ogg")) {
+        let filename = "recording.ogg";
+        if (audioBlob.type.includes("ogg")) {
           filename = "recording.ogg";
+        } else if (audioBlob.type.includes("webm")) {
+          filename = "recording.webm";
+        } else if (audioBlob.type.includes("mp4") || audioBlob.type.includes("m4a")) {
+          filename = "recording.m4a";
         } else if (audioBlob.type.includes("wav")) {
           filename = "recording.wav";
         }
