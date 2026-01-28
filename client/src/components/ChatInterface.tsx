@@ -174,11 +174,12 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
         formData.append("audio", audioBlob, filename);
         formData.append("language", "es");
 
-        // Retry transcription up to 3 times
+        // Retry transcription up to 5 times with longer delays
         let transcribeData = null;
         let lastError = null;
+        const maxAttempts = 5;
         
-        for (let attempt = 0; attempt < 3; attempt++) {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
           try {
             const transcribeResponse = await fetch("/api/transcribe", {
               method: "POST",
@@ -190,15 +191,15 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
               break;
             } else {
               lastError = new Error("Transcription failed");
-              // Wait a bit before retrying
-              if (attempt < 2) {
-                await new Promise(resolve => setTimeout(resolve, 300));
+              // Wait longer before retrying
+              if (attempt < maxAttempts - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500 + (attempt * 200)));
               }
             }
           } catch (err) {
             lastError = err;
-            if (attempt < 2) {
-              await new Promise(resolve => setTimeout(resolve, 300));
+            if (attempt < maxAttempts - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500 + (attempt * 200)));
             }
           }
         }

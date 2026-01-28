@@ -106,6 +106,25 @@ export function VoiceRecorder({
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
+      // Ensure minimum recording time of 500ms for valid audio
+      const minRecordingTime = 500;
+      const recordingStartTime = Date.now() - (recordingDuration * 1000);
+      const elapsed = Date.now() - recordingStartTime;
+      
+      if (elapsed < minRecordingTime) {
+        setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            mediaRecorderRef.current.stop();
+          }
+          setIsRecording(false);
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+        }, minRecordingTime - elapsed);
+        return;
+      }
+      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       
@@ -114,7 +133,7 @@ export function VoiceRecorder({
         timerRef.current = null;
       }
     }
-  }, [isRecording]);
+  }, [isRecording, recordingDuration]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
