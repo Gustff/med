@@ -66,9 +66,19 @@ export function VoiceRecorder({
 
     audioChunksRef.current = [];
     
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4",
-    });
+    // Use opus codec for better compatibility
+    let mimeType = "audio/webm";
+    if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      mimeType = "audio/webm;codecs=opus";
+    } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+      mimeType = "audio/webm";
+    } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+      mimeType = "audio/mp4";
+    } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+      mimeType = "audio/ogg";
+    }
+    
+    const mediaRecorder = new MediaRecorder(stream, { mimeType });
     
     mediaRecorderRef.current = mediaRecorder;
 

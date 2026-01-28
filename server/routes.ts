@@ -114,8 +114,22 @@ export async function registerRoutes(
       }
 
       const formData = new FormData();
-      const audioBlob = new Blob([req.file.buffer], { type: req.file.mimetype });
-      formData.append("file", audioBlob, req.file.originalname || "audio.webm");
+      
+      // Determine correct file extension based on mime type
+      let filename = "audio.webm";
+      const mimeType = req.file.mimetype || "audio/webm";
+      if (mimeType.includes("mp4") || mimeType.includes("m4a")) {
+        filename = "audio.m4a";
+      } else if (mimeType.includes("ogg")) {
+        filename = "audio.ogg";
+      } else if (mimeType.includes("wav")) {
+        filename = "audio.wav";
+      } else if (mimeType.includes("mp3") || mimeType.includes("mpeg")) {
+        filename = "audio.mp3";
+      }
+      
+      const audioBlob = new Blob([req.file.buffer], { type: mimeType });
+      formData.append("file", audioBlob, filename);
       formData.append("model", "whisper-1");
       formData.append("language", req.body.language || "es");
       formData.append("response_format", "json");
