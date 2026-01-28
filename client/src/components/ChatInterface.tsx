@@ -165,16 +165,39 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
         formData.append("audio", audioBlob, "recording.webm");
         formData.append("language", "es");
 
-        const transcribeResponse = await fetch("/api/transcribe", {
-          method: "POST",
-          body: formData,
-        });
+        // Retry transcription up to 3 times
+        let transcribeData = null;
+        let lastError = null;
+        
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const transcribeResponse = await fetch("/api/transcribe", {
+              method: "POST",
+              body: formData,
+            });
 
-        if (!transcribeResponse.ok) {
-          throw new Error("Error en la transcripción");
+            if (transcribeResponse.ok) {
+              transcribeData = await transcribeResponse.json();
+              break;
+            } else {
+              lastError = new Error("Transcription failed");
+              // Wait a bit before retrying
+              if (attempt < 2) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+              }
+            }
+          } catch (err) {
+            lastError = err;
+            if (attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          }
         }
 
-        const transcribeData = await transcribeResponse.json();
+        if (!transcribeData) {
+          throw lastError || new Error("Error en la transcripción");
+        }
+
         transcribedText = transcribeData.text;
       }
 
