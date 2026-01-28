@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { TriageIndicator, TriageLegend } from "./TriageIndicator";
@@ -8,6 +9,14 @@ import { VoiceWaveform } from "./VoiceWaveform";
 import { useToast } from "@/hooks/use-toast";
 import { Info, RotateCcw, Volume2, VolumeX, Stethoscope } from "lucide-react";
 import type { Message, TriagePriority, ClinicalDomain } from "@shared/schema";
+
+const VOICE_OPTIONS = [
+  { value: "dora", label: "Dora", description: "Voz femenina cálida" },
+  { value: "alex", label: "Alex", description: "Voz masculina natural" },
+  { value: "noel", label: "Noel", description: "Voz neutral suave" },
+] as const;
+
+type VoiceOption = typeof VOICE_OPTIONS[number]["value"];
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -20,6 +29,7 @@ export function ChatInterface() {
   }>({});
   const [showLegend, setShowLegend] = useState(false);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>("dora");
   const [sessionId, setSessionId] = useState<string>(() => 
     `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   );
@@ -152,7 +162,7 @@ export function ChatInterface() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text: chatData.message,
-            voice: "nova",
+            voice: selectedVoice,
           }),
         });
 
@@ -191,7 +201,7 @@ export function ChatInterface() {
     } finally {
       setIsProcessing(false);
     }
-  }, [sessionId, messages, autoPlayEnabled, playAudio, toast]);
+  }, [sessionId, messages, autoPlayEnabled, selectedVoice, playAudio, toast]);
 
   const handleRecordingComplete = useCallback((audioBlob: Blob) => {
     sendMessage("", audioBlob);
@@ -314,6 +324,32 @@ export function ChatInterface() {
 
       <footer className="flex-shrink-0 border-t border-border bg-card p-4">
         <div className="max-w-2xl mx-auto">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <span className="text-xs text-muted-foreground">Voz del paciente:</span>
+            <Select 
+              value={selectedVoice} 
+              onValueChange={(value) => setSelectedVoice(value as VoiceOption)}
+            >
+              <SelectTrigger 
+                className="w-32 h-8 text-sm"
+                data-testid="select-voice"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VOICE_OPTIONS.map((voice) => (
+                  <SelectItem 
+                    key={voice.value} 
+                    value={voice.value}
+                    data-testid={`option-voice-${voice.value}`}
+                  >
+                    {voice.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <VoiceRecorder
             onRecordingComplete={handleRecordingComplete}
             isProcessing={isProcessing}
