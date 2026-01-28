@@ -177,10 +177,10 @@ export function VoiceRecorder({
       
       <p className="text-xs text-muted-foreground text-center">
         {isRecording 
-          ? "Toca para detener" 
+          ? "Suelta para enviar" 
           : isProcessing 
-            ? "Procesando tu mensaje..." 
-            : "Toca para hablar"
+            ? "Procesando..." 
+            : "Mantén para hablar"
         }
       </p>
     </div>

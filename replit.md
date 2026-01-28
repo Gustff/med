@@ -1,54 +1,42 @@
-# Asistente Médico - Triaje Clínico por Voz
+# Simulador de Paciente - Entrenamiento de Triaje Clínico
 
 ## Overview
-Aplicación web profesional de chat médico por VOZ, enfocada en triaje clínico seguro, orientación médica, y detección temprana de emergencias. La app funciona como un asistente médico de primera línea, empático, claro y legalmente seguro.
+Aplicación de simulación de pacientes por voz para entrenamiento médico. El usuario actúa como doctor/estudiante de medicina y la IA simula un paciente con síntomas reales. Practica tus habilidades de interrogatorio clínico y triaje.
 
 ## Features
-- Chat 100% por voz (voz a texto + texto a voz)
-- Lenguaje: Español (LATAM - Perú)
-- Sistema de triaje con 3 niveles de prioridad (PS1, PS2, PS3)
+- Chat 100% por VOZ - El usuario habla como doctor
+- IA actúa como paciente simulado con síntomas reales
+- Español peruano natural y coloquial
+- Sistema de triaje con 3 niveles (PS1, PS2, PS3)
 - Dominios clínicos: Trauma/Shock, Ginecología, Clínico
-- Modo texto alternativo
-- Reproducción automática de respuestas
-- Interfaz médica profesional con dark mode
+- Respuestas rápidas y naturales
+- Interfaz profesional con modo oscuro
+
+## Cómo Usar
+1. El paciente (IA) te saluda con sus síntomas iniciales
+2. Habla como doctor para interrogar al paciente
+3. Haz preguntas específicas para obtener más información
+4. El paciente responde naturalmente (a veces omite detalles)
+5. Practica tu triaje: ¿Es PS1, PS2 o PS3?
 
 ## Architecture
 
 ### Frontend (React + Vite)
-- `client/src/components/ChatInterface.tsx` - Interfaz principal de chat
-- `client/src/components/VoiceRecorder.tsx` - Grabación de voz
-- `client/src/components/MessageBubble.tsx` - Burbujas de mensaje
-- `client/src/components/TriageIndicator.tsx` - Indicadores de triaje
-- `client/src/components/VoiceWaveform.tsx` - Visualización de audio
+- client/src/components/ChatInterface.tsx - Interfaz de chat por voz
+- client/src/components/VoiceRecorder.tsx - Grabación de voz
+- client/src/components/MessageBubble.tsx - Burbujas de mensaje
+- client/src/components/TriageIndicator.tsx - Indicadores de triaje
 
 ### Backend (Express)
-- `server/routes.ts` - Rutas API:
-  - `POST /api/transcribe` - Transcripción de audio (Whisper)
-  - `POST /api/chat` - Chat con IA médica
-  - `POST /api/synthesize` - Síntesis de voz (TTS)
-
-### Data Models (`shared/schema.ts`)
-- Message: Mensajes de chat con audio y triaje
-- ChatSession: Sesiones de conversación
-- TriagePriority: PS1 (Emergencia), PS2 (Urgente), PS3 (No urgente)
-- ClinicalDomain: trauma_shock, gynecology, clinical
+- server/routes.ts - Rutas API:
+  - POST /api/transcribe - Transcripción de audio (Whisper)
+  - POST /api/chat - Paciente simulado por IA
+  - POST /api/synthesize - Síntesis de voz (TTS)
 
 ## Environment Variables
-- `LEMONFOX_API_KEY` - API key para servicios de voz y LLM
-
-## Running the Application
-```bash
-npm run dev
-```
+- LEMONFOX_API_KEY - API key para servicios de voz y LLM
 
 ## Triage System
-- **PS1 (Emergencia)**: Riesgo vital - Hospital inmediato
-- **PS2 (Urgente)**: Evaluación médica en horas
-- **PS3 (No urgente)**: Orientación y seguimiento
-
-## Safety Rules
-- NO diagnostica enfermedades
-- NO receta medicamentos ni dosis
-- NO indica tratamientos específicos
-- Siempre deriva ante duda sobre riesgo vital
-- Especial cuidado con: niños, embarazadas, salud mental, dolor torácico
+- PS1 (Emergencia): Riesgo vital - Hospital inmediato
+- PS2 (Urgente): Evaluación médica en horas
+- PS3 (No urgente): Orientación y seguimiento

@@ -1,19 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { TriageIndicator, TriageLegend } from "./TriageIndicator";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Keyboard, Mic, Info, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Info, RotateCcw, Volume2, VolumeX, Stethoscope } from "lucide-react";
 import type { Message, TriagePriority, ClinicalDomain } from "@shared/schema";
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
-  const [textInput, setTextInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
@@ -40,12 +37,12 @@ export function ChatInterface() {
       const welcomeMessage: Message = {
         id: "welcome",
         role: "assistant",
-        content: "Hola, soy tu asistente médico de triaje. Estoy aquí para escucharte y orientarte sobre tus síntomas. Por favor, cuéntame qué molestias estás presentando.\n\nRecuerda que esta orientación no reemplaza una evaluación médica presencial.",
+        content: "Hola doctor, buenas tardes. Vengo porque no me siento bien desde hace unos días y ya no aguanto más. ¿Me puede ayudar?",
         timestamp: Date.now(),
       };
       setMessages([welcomeMessage]);
     }
-  }, []);
+  }, [messages.length]);
 
   const playAudio = useCallback(async (audioUrl: string, messageId?: string) => {
     try {
@@ -134,7 +131,7 @@ export function ChatInterface() {
       });
 
       if (!chatResponse.ok) {
-        throw new Error("Error en la respuesta del asistente");
+        throw new Error("Error en la respuesta del paciente");
       }
 
       const chatData = await chatResponse.json();
@@ -148,14 +145,14 @@ export function ChatInterface() {
 
       let audioUrl: string | undefined;
       
-      // Always generate TTS audio so user can play it manually later
+      // Always generate TTS audio
       try {
         const synthesisResponse = await fetch("/api/synthesize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text: chatData.message,
-            voice: "alloy",
+            voice: "nova",
           }),
         });
 
@@ -165,7 +162,6 @@ export function ChatInterface() {
         }
       } catch (synthesisError) {
         console.error("TTS synthesis error:", synthesisError);
-        // Continue without audio - not critical
       }
 
       const assistantMessage: Message = {
@@ -201,20 +197,6 @@ export function ChatInterface() {
     sendMessage("", audioBlob);
   }, [sendMessage]);
 
-  const handleTextSubmit = useCallback(() => {
-    if (textInput.trim()) {
-      sendMessage(textInput);
-      setTextInput("");
-    }
-  }, [textInput, sendMessage]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleTextSubmit();
-    }
-  }, [handleTextSubmit]);
-
   const resetConversation = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -233,14 +215,14 @@ export function ChatInterface() {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">🏥</span>
+              <Stethoscope className="w-5 h-5 text-primary" />
             </div>
             <div className="min-w-0">
               <h1 className="text-base font-semibold text-foreground truncate">
-                Asistente Médico
+                Simulador de Paciente
               </h1>
               <p className="text-xs text-muted-foreground">
-                Triaje clínico seguro
+                Practica tu triaje clínico
               </p>
             </div>
           </div>
@@ -313,7 +295,7 @@ export function ChatInterface() {
               <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center">
                 <VoiceWaveform isActive={true} variant="processing" size="sm" />
               </div>
-              <span className="text-sm">El asistente está pensando...</span>
+              <span className="text-sm">El paciente está respondiendo...</span>
             </div>
           )}
           
@@ -322,7 +304,7 @@ export function ChatInterface() {
               <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                 <VoiceWaveform isActive={true} variant="playing" size="sm" />
               </div>
-              <span className="text-sm">Reproduciendo respuesta...</span>
+              <span className="text-sm">Escuchando al paciente...</span>
             </div>
           )}
           
@@ -332,57 +314,14 @@ export function ChatInterface() {
 
       <footer className="flex-shrink-0 border-t border-border bg-card p-4">
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Button
-              size="sm"
-              variant={inputMode === "voice" ? "default" : "outline"}
-              onClick={() => setInputMode("voice")}
-              data-testid="button-mode-voice"
-            >
-              <Mic className="w-4 h-4 mr-1.5" />
-              Voz
-            </Button>
-            <Button
-              size="sm"
-              variant={inputMode === "text" ? "default" : "outline"}
-              onClick={() => setInputMode("text")}
-              data-testid="button-mode-text"
-            >
-              <Keyboard className="w-4 h-4 mr-1.5" />
-              Texto
-            </Button>
-          </div>
-
-          {inputMode === "voice" ? (
-            <VoiceRecorder
-              onRecordingComplete={handleRecordingComplete}
-              isProcessing={isProcessing}
-              disabled={isPlayingAudio}
-            />
-          ) : (
-            <div className="flex gap-2">
-              <Textarea
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Describe tus síntomas..."
-                className="min-h-[44px] max-h-32 resize-none"
-                disabled={isProcessing}
-                data-testid="input-text-message"
-              />
-              <Button
-                size="icon"
-                onClick={handleTextSubmit}
-                disabled={!textInput.trim() || isProcessing}
-                data-testid="button-send-text"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+          <VoiceRecorder
+            onRecordingComplete={handleRecordingComplete}
+            isProcessing={isProcessing}
+            disabled={isPlayingAudio}
+          />
           
           <p className="text-xs text-muted-foreground text-center mt-3">
-            Esta orientación no reemplaza una evaluación médica presencial
+            Habla como doctor para interrogar al paciente
           </p>
         </div>
       </footer>

@@ -1,4 +1,4 @@
-import { User, Stethoscope, Volume2 } from "lucide-react";
+import { Stethoscope, Volume2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TriageIndicator } from "./TriageIndicator";
 import type { Message } from "@shared/schema";
@@ -34,9 +34,9 @@ export function MessageBubble({ message, onPlayAudio, isPlaying }: MessageBubble
         `}
       >
         {isUser ? (
-          <User className="w-4 h-4" />
-        ) : (
           <Stethoscope className="w-4 h-4" />
+        ) : (
+          <UserRound className="w-4 h-4" />
         )}
       </div>
       
