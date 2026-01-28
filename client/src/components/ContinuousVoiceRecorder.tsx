@@ -30,9 +30,9 @@ export function ContinuousVoiceRecorder({
   const animationFrameRef = useRef<number | null>(null);
   const speakingStartTimeRef = useRef<number | null>(null);
 
-  const SILENCE_THRESHOLD = 15;
-  const SILENCE_DURATION = 1500;
-  const MIN_SPEAKING_DURATION = 800;
+  const SILENCE_THRESHOLD = 12;
+  const SILENCE_DURATION = 1000;
+  const MIN_SPEAKING_DURATION = 500;
 
   const stopListening = useCallback(() => {
     if (animationFrameRef.current) {
