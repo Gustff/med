@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import type { Message, TriagePriority, ClinicalDomain } from "@shared/schema";
+import type { Message } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -31,17 +31,28 @@ TU ROL COMO PACIENTE:
 - Tienes los síntomas específicos de tu caso que describes de forma natural
 - Respondes a las preguntas del doctor como lo haría un paciente común
 - Usas español peruano natural, coloquial ("me duele un montón", "estoy asustado", "ya no aguanto más", "pues...", "mire doctor")
-- Muestras emociones realistas: miedo, dolor, ansiedad, confusión, preocupación
+
+EXPRESIONES EMOCIONALES - ¡MUY IMPORTANTE!
+- ACTÚA el dolor y las emociones, no solo las describas
+- Usa sonidos y expresiones de dolor: "Ayyy", "Ahhh", "Uyyyy", "Auch"
+- Alarga las vocales cuando hay dolor intenso: "Me dueleeee mucho", "Ayyyy doctoooor"
+- Muestra sufrimiento real: quejidos, suspiros, pausas de dolor
+- Ejemplos de expresiones:
+  * "Ayyy doctor, me duele muchísimo aquí... ahhh no puedo más"
+  * "Uyyyy... es que cuando respiro así... ayyy me mata"
+  * "Doctoooor, por favor ayúdeme... ahhh el dolor es horrible"
+  * "Ayyy no me toque ahí... ¡auch! duele demasiado"
+- Si el dolor es intenso, interrumpe tu habla con quejidos
+- Muestra miedo, ansiedad, desesperación en tu forma de hablar
 
 PERSONALIDAD Y COMPORTAMIENTO:
-- Habla de forma NATURAL y DETALLADA, como un paciente real contando su historia
-- Da respuestas de 3-5 oraciones mínimo, describiendo bien tus síntomas y cómo te sientes
+- Habla de forma NATURAL y EMOTIVA, como un paciente real sufriendo
+- Da respuestas de 3-5 oraciones, pero intercala expresiones de dolor
 - A veces no recuerdas exactamente cuándo empezaron los síntomas ("será como hace... unos 3 días, quizás más")
-- Puedes estar nervioso, asustado o preocupado - muéstralo en tu forma de hablar
-- Responde lo que te preguntan y agrega detalles relevantes que un paciente real mencionaría
-- Si el doctor no pregunta algo importante, puedes omitirlo o mencionarlo de pasada
+- Puedes estar nervioso, asustado o preocupado - muéstralo con tu voz
+- Responde lo que te preguntan pero muestra tu sufrimiento
 - Usa interjecciones naturales: "ay", "uy", "mire", "es que...", "la verdad..."
-- Describe sensaciones físicas: "siento como si...", "es un dolor que...", "me cuesta..."
+- Describe sensaciones físicas con emoción: "siento como si...", "es un dolor que... ayyy"
 
 CÓMO DESCRIBIR SÍNTOMAS:
 - Usa comparaciones: "como si me apretaran el pecho", "como agujas", "como un peso"
@@ -58,37 +69,12 @@ INFORMACIÓN QUE DEBES REVELAR GRADUALMENTE:
 - Hábitos relevantes (fumar, alcohol) solo si preguntan directamente
 
 INSTRUCCIONES DE RESPUESTA:
-- Responde DETALLADAMENTE como paciente real (3-5 oraciones mínimo)
-- Si el doctor hace buenas preguntas, revela más información con detalle
-- Muestra la gravedad real de tu caso con tu forma de expresarte
-- Mantén coherencia con tu caso clínico a lo largo de toda la conversación
-- Actúa preocupado si tu condición es grave, más tranquilo si es leve
-
-Al final de CADA respuesta, incluye esta línea OCULTA para el sistema:
-[TRIAGE: PS1|PS2|PS3, DOMAIN: trauma_shock|gynecology|clinical]
-Donde PS1=emergencia vital inmediata, PS2=urgente requiere evaluación en horas, PS3=no urgente puede esperar.`;
-}
-
-function parseTriageFromResponse(response: string): {
-  message: string;
-  triagePriority?: TriagePriority;
-  clinicalDomain?: ClinicalDomain;
-} {
-  const triageMatch = response.match(/\[TRIAGE:\s*(PS[123]),\s*DOMAIN:\s*(\w+)\]/i);
-  
-  if (triageMatch) {
-    const priority = triageMatch[1].toUpperCase() as TriagePriority;
-    const domain = triageMatch[2].toLowerCase() as ClinicalDomain;
-    const message = response.replace(/\[TRIAGE:.*?\]/i, "").trim();
-    
-    return {
-      message,
-      triagePriority: priority,
-      clinicalDomain: ["trauma_shock", "gynecology", "clinical"].includes(domain) ? domain : undefined,
-    };
-  }
-  
-  return { message: response };
+- Responde como paciente real que SIENTE dolor, no solo lo describe
+- Intercala quejidos y expresiones de dolor en tus respuestas
+- Si el doctor hace buenas preguntas, revela más información con emoción
+- Muestra la gravedad de tu caso con tu sufrimiento
+- Mantén coherencia con tu caso clínico
+- Si tu condición es grave, muéstrate más desesperado y adolorido`;
 }
 
 export async function registerRoutes(
@@ -203,8 +189,6 @@ export async function registerRoutes(
       const data = await response.json();
       const assistantResponse = data.choices?.[0]?.message?.content || "Lo siento, no pude procesar tu consulta.";
 
-      const parsedResponse = parseTriageFromResponse(assistantResponse);
-
       // Store messages in session
       const userMessage: Message = {
         id: `user-${Date.now()}`,
@@ -216,29 +200,15 @@ export async function registerRoutes(
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
-        content: parsedResponse.message,
+        content: assistantResponse,
         timestamp: Date.now(),
-        triagePriority: parsedResponse.triagePriority,
-        clinicalDomain: parsedResponse.clinicalDomain,
       };
 
       await storage.addMessageToSession(currentSessionId, userMessage);
       await storage.addMessageToSession(currentSessionId, assistantMessage);
 
-      // Update session triage if present
-      if (parsedResponse.triagePriority) {
-        const session = await storage.getSession(currentSessionId);
-        if (session) {
-          session.currentTriagePriority = parsedResponse.triagePriority;
-          session.currentClinicalDomain = parsedResponse.clinicalDomain;
-          await storage.updateSession(session);
-        }
-      }
-
       res.json({
-        message: parsedResponse.message,
-        triagePriority: parsedResponse.triagePriority,
-        clinicalDomain: parsedResponse.clinicalDomain,
+        message: assistantResponse,
         sessionId: currentSessionId,
       });
     } catch (error) {

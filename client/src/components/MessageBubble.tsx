@@ -1,6 +1,5 @@
 import { Stethoscope, Volume2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TriageIndicator } from "./TriageIndicator";
 import type { Message } from "@shared/schema";
 
 interface MessageBubbleProps {
@@ -72,16 +71,6 @@ export function MessageBubble({ message, onPlayAudio, isPlaying }: MessageBubble
             </Button>
           )}
         </div>
-        
-        {!isUser && (message.triagePriority || message.clinicalDomain) && (
-          <div className="mt-1">
-            <TriageIndicator 
-              priority={message.triagePriority} 
-              domain={message.clinicalDomain}
-              showLabel={true}
-            />
-          </div>
-        )}
       </div>
     </div>
   );

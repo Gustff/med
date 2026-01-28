@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceRecorder } from "./VoiceRecorder";
-import { TriageIndicator, TriageLegend } from "./TriageIndicator";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { useToast } from "@/hooks/use-toast";
-import { Info, RotateCcw, Volume2, VolumeX, Stethoscope, Save } from "lucide-react";
-import type { Message, TriagePriority, ClinicalDomain, ClinicalCase } from "@shared/schema";
+import { RotateCcw, Volume2, VolumeX, Stethoscope } from "lucide-react";
+import type { Message, ClinicalCase } from "@shared/schema";
 
 const VOICE_OPTIONS = [
   { value: "dora", label: "Dora", description: "Voz femenina cálida" },
@@ -21,19 +20,13 @@ type VoiceOption = typeof VOICE_OPTIONS[number]["value"];
 interface ChatInterfaceProps {
   selectedCase?: ClinicalCase;
   onMessagesChange?: (messages: Message[]) => void;
-  onTriageChange?: (triage: TriagePriority | undefined) => void;
 }
 
-export function ChatInterface({ selectedCase, onMessagesChange, onTriageChange }: ChatInterfaceProps) {
+export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
-  const [currentTriage, setCurrentTriage] = useState<{
-    priority?: TriagePriority;
-    domain?: ClinicalDomain;
-  }>({});
-  const [showLegend, setShowLegend] = useState(false);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption>("dora");
   const [sessionId, setSessionId] = useState<string>(() => 
@@ -51,10 +44,6 @@ export function ChatInterface({ selectedCase, onMessagesChange, onTriageChange }
   useEffect(() => {
     onMessagesChange?.(messages);
   }, [messages, onMessagesChange]);
-
-  useEffect(() => {
-    onTriageChange?.(currentTriage.priority);
-  }, [currentTriage.priority, onTriageChange]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -178,13 +167,6 @@ export function ChatInterface({ selectedCase, onMessagesChange, onTriageChange }
 
       const chatData = await chatResponse.json();
 
-      if (chatData.triagePriority) {
-        setCurrentTriage({
-          priority: chatData.triagePriority,
-          domain: chatData.clinicalDomain,
-        });
-      }
-
       let audioUrl: string | undefined;
       
       // Always generate TTS audio
@@ -212,8 +194,6 @@ export function ChatInterface({ selectedCase, onMessagesChange, onTriageChange }
         content: chatData.message,
         timestamp: Date.now(),
         audioUrl,
-        triagePriority: chatData.triagePriority,
-        clinicalDomain: chatData.clinicalDomain,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -245,7 +225,6 @@ export function ChatInterface({ selectedCase, onMessagesChange, onTriageChange }
       audioRef.current = null;
     }
     setMessages([]);
-    setCurrentTriage({});
     setSessionId(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
     setIsPlayingAudio(false);
     setPlayingMessageId(null);
@@ -270,23 +249,6 @@ export function ChatInterface({ selectedCase, onMessagesChange, onTriageChange }
           </div>
           
           <div className="flex items-center gap-2 flex-shrink-0">
-            {currentTriage.priority && (
-              <TriageIndicator 
-                priority={currentTriage.priority} 
-                domain={currentTriage.domain}
-                showLabel={false}
-              />
-            )}
-            
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setShowLegend(!showLegend)}
-              data-testid="button-toggle-legend"
-            >
-              <Info className="w-4 h-4" />
-            </Button>
-            
             <Button
               size="icon"
               variant="ghost"
@@ -310,12 +272,6 @@ export function ChatInterface({ selectedCase, onMessagesChange, onTriageChange }
             </Button>
           </div>
         </div>
-        
-        {showLegend && (
-          <div className="mt-3">
-            <TriageLegend />
-          </div>
-        )}
       </header>
 
       <ScrollArea 

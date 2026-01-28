@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, AlertTriangle, Baby, Activity, Save } from "lucide-react";
-import { CLINICAL_CASES, type ClinicalDomain, type Message, type TriagePriority } from "@shared/schema";
+import { CLINICAL_CASES, type ClinicalDomain, type Message } from "@shared/schema";
 
 const CATEGORY_INFO: Record<ClinicalDomain, { label: string; icon: typeof AlertTriangle; color: string }> = {
   trauma_shock: { label: "Trauma/Shock", icon: AlertTriangle, color: "bg-red-600" },
@@ -20,7 +20,6 @@ export default function Simulation() {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
-  const [currentTriage, setCurrentTriage] = useState<TriagePriority | undefined>();
   
   const selectedCase = CLINICAL_CASES.find(c => c.id === params.caseId);
   
@@ -57,7 +56,6 @@ export default function Simulation() {
           caseName: selectedCase.name,
           category: selectedCase.category,
           messages: currentMessages,
-          finalTriage: currentTriage,
         }),
       });
 
@@ -126,7 +124,6 @@ export default function Simulation() {
         <ChatInterface 
           selectedCase={selectedCase}
           onMessagesChange={setCurrentMessages}
-          onTriageChange={setCurrentTriage}
         />
       </main>
     </div>
