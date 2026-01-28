@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import FormData from "form-data";
 import type { Message } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -114,7 +113,7 @@ export async function registerRoutes(
         return res.status(500).json({ error: "API key not configured" });
       }
 
-      // Use the original filename from client, determine extension
+      // Use the original filename from client
       const originalName = req.file.originalname || "audio.webm";
       let mimeType = req.file.mimetype || "audio/webm";
       
@@ -125,14 +124,11 @@ export async function registerRoutes(
       
       console.log("Transcribe request:", { originalName, mimeType, size: req.file.buffer.length });
       
-      // Use form-data library for proper multipart encoding
-      const formData = new FormData();
+      // Convert buffer to File object for proper FormData handling
+      const audioFile = new File([req.file.buffer], originalName, { type: mimeType });
       
-      // Append buffer directly with proper content type
-      formData.append("file", req.file.buffer, {
-        filename: originalName,
-        contentType: mimeType,
-      });
+      const formData = new FormData();
+      formData.append("file", audioFile);
       formData.append("model", "whisper-1");
       formData.append("language", req.body.language || "es");
       formData.append("response_format", "json");
@@ -141,9 +137,8 @@ export async function registerRoutes(
         method: "POST",
         headers: {
           "Authorization": `Bearer ${LEMONFOX_API_KEY}`,
-          ...formData.getHeaders(),
         },
-        body: formData as unknown as BodyInit,
+        body: formData,
       });
 
       if (!response.ok) {
