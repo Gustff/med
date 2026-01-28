@@ -30,9 +30,10 @@ export function ContinuousVoiceRecorder({
   const animationFrameRef = useRef<number | null>(null);
   const speakingStartTimeRef = useRef<number | null>(null);
 
-  const SILENCE_THRESHOLD = 10;
-  const SILENCE_DURATION = 300;
+  const SILENCE_THRESHOLD = 25;
+  const SILENCE_DURATION = 400;
   const MIN_SPEAKING_DURATION = 300;
+  const MAX_RECORDING_TIME = 15000;
 
   const stopListening = useCallback(() => {
     if (animationFrameRef.current) {
@@ -159,6 +160,19 @@ export function ContinuousVoiceRecorder({
         if (silenceTimeoutRef.current) {
           clearTimeout(silenceTimeoutRef.current);
           silenceTimeoutRef.current = null;
+        }
+        
+        // Force send after max recording time
+        if (speakingStartTimeRef.current) {
+          const elapsed = Date.now() - speakingStartTimeRef.current;
+          if (elapsed >= MAX_RECORDING_TIME) {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+              mediaRecorderRef.current.stop();
+            }
+            setIsSpeaking(false);
+            setIsListening(false);
+            return;
+          }
         }
       } else if (isSpeaking) {
         if (!silenceTimeoutRef.current) {
