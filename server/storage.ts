@@ -1,4 +1,4 @@
-import type { Message, ChatSession } from "@shared/schema";
+import type { Message, ChatSession, SavedConversation } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -6,13 +6,18 @@ export interface IStorage {
   createSession(id: string): Promise<ChatSession>;
   updateSession(session: ChatSession): Promise<ChatSession>;
   addMessageToSession(sessionId: string, message: Message): Promise<void>;
+  saveConversation(conversation: SavedConversation): Promise<SavedConversation>;
+  getConversations(): Promise<SavedConversation[]>;
+  getConversation(id: string): Promise<SavedConversation | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private sessions: Map<string, ChatSession>;
+  private savedConversations: Map<string, SavedConversation>;
 
   constructor() {
     this.sessions = new Map();
+    this.savedConversations = new Map();
   }
 
   async getSession(id: string): Promise<ChatSession | undefined> {
@@ -44,6 +49,19 @@ export class MemStorage implements IStorage {
     session.messages.push(message);
     session.updatedAt = Date.now();
     this.sessions.set(sessionId, session);
+  }
+
+  async saveConversation(conversation: SavedConversation): Promise<SavedConversation> {
+    this.savedConversations.set(conversation.id, conversation);
+    return conversation;
+  }
+
+  async getConversations(): Promise<SavedConversation[]> {
+    return Array.from(this.savedConversations.values()).sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  async getConversation(id: string): Promise<SavedConversation | undefined> {
+    return this.savedConversations.get(id);
   }
 }
 

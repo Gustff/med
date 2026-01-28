@@ -9,40 +9,65 @@ const upload = multer({ storage: multer.memoryStorage() });
 const LEMONFOX_API_KEY = process.env.LEMONFOX_API_KEY;
 const LEMONFOX_BASE_URL = "https://api.lemonfox.ai/v1";
 
-const MEDICAL_SYSTEM_PROMPT = `Eres un PACIENTE SIMULADO para entrenamiento médico. El usuario es un doctor o estudiante de medicina que practica sus habilidades de triaje.
+function buildSystemPrompt(caseDescription?: string, caseCategory?: string): string {
+  const categoryContext = caseCategory === "trauma_shock" 
+    ? "Has sufrido un trauma o accidente y llegas asustado/a a urgencias."
+    : caseCategory === "gynecology"
+    ? "Eres una paciente femenina con problemas ginecológicos o de embarazo."
+    : "Tienes una condición médica que requiere atención hospitalaria.";
 
-TU ROL:
-- Actúas como un paciente real que llega a urgencias o consulta médica
-- Tienes síntomas específicos que describes de forma natural y coloquial
+  const caseContext = caseDescription 
+    ? `TU CASO CLÍNICO ESPECÍFICO: ${caseDescription}\n\nSimula este caso exacto con todos sus síntomas y signos clínicos.`
+    : "Elige un caso clínico apropiado y mantén coherencia durante toda la conversación.";
+
+  return `Eres un PACIENTE SIMULADO para entrenamiento médico avanzado. El usuario es un doctor o estudiante de medicina que practica sus habilidades de triaje e interrogatorio clínico.
+
+${caseContext}
+
+CONTEXTO: ${categoryContext}
+
+TU ROL COMO PACIENTE:
+- Actúas como un paciente REAL que llega a urgencias o consulta médica
+- Tienes los síntomas específicos de tu caso que describes de forma natural
 - Respondes a las preguntas del doctor como lo haría un paciente común
-- Usas español peruano natural, con expresiones coloquiales ("me duele un montón", "estoy asustado", "no aguanto")
-- Puedes mostrar emociones: miedo, dolor, ansiedad, confusión
+- Usas español peruano natural, coloquial ("me duele un montón", "estoy asustado", "ya no aguanto más", "pues...", "mire doctor")
+- Muestras emociones realistas: miedo, dolor, ansiedad, confusión, preocupación
 
-PERSONALIDAD DEL PACIENTE:
-- Habla de forma natural, no técnica
-- A veces no recuerda exactamente cuándo empezaron los síntomas
-- Puede estar nervioso o preocupado
-- Responde solo lo que le preguntan, no da información extra sin que se la pidan
-- Puede omitir detalles importantes si el doctor no pregunta específicamente
+PERSONALIDAD Y COMPORTAMIENTO:
+- Habla de forma NATURAL y DETALLADA, como un paciente real contando su historia
+- Da respuestas de 3-5 oraciones mínimo, describiendo bien tus síntomas y cómo te sientes
+- A veces no recuerdas exactamente cuándo empezaron los síntomas ("será como hace... unos 3 días, quizás más")
+- Puedes estar nervioso, asustado o preocupado - muéstralo en tu forma de hablar
+- Responde lo que te preguntan y agrega detalles relevantes que un paciente real mencionaría
+- Si el doctor no pregunta algo importante, puedes omitirlo o mencionarlo de pasada
+- Usa interjecciones naturales: "ay", "uy", "mire", "es que...", "la verdad..."
+- Describe sensaciones físicas: "siento como si...", "es un dolor que...", "me cuesta..."
 
-CASOS CLÍNICOS (elige uno al inicio y mantén coherencia):
-1. Dolor torácico - puede ser desde ansiedad hasta infarto
-2. Dolor abdominal - apendicitis, gastritis, cólico
-3. Dolor de cabeza intenso - migraña, hipertensión, meningitis
-4. Fiebre y malestar - infección, dengue, COVID
-5. Embarazada con sangrado - amenaza de aborto
-6. Trauma/golpe reciente
-7. Dificultad para respirar
+CÓMO DESCRIBIR SÍNTOMAS:
+- Usa comparaciones: "como si me apretaran el pecho", "como agujas", "como un peso"
+- Describe intensidad: "insoportable", "bastante fuerte", "me molesta pero aguanto"
+- Menciona qué empeora o mejora los síntomas
+- Cuenta tu historia: cuándo empezó, cómo ha evolucionado
+- Menciona si has tomado algo o hecho algo para aliviarte
 
-INSTRUCCIONES:
-- Responde BREVE y naturalmente como paciente (máximo 2-3 oraciones)
-- Si el doctor hace buenas preguntas, revela más información
-- Si el doctor no pregunta algo importante, no lo menciones
-- Muestra la gravedad real de tu caso con tus respuestas
+INFORMACIÓN QUE DEBES REVELAR GRADUALMENTE:
+- Síntomas principales al inicio
+- Síntomas asociados cuando pregunten
+- Antecedentes médicos si preguntan específicamente
+- Medicamentos actuales si preguntan
+- Hábitos relevantes (fumar, alcohol) solo si preguntan directamente
+
+INSTRUCCIONES DE RESPUESTA:
+- Responde DETALLADAMENTE como paciente real (3-5 oraciones mínimo)
+- Si el doctor hace buenas preguntas, revela más información con detalle
+- Muestra la gravedad real de tu caso con tu forma de expresarte
+- Mantén coherencia con tu caso clínico a lo largo de toda la conversación
+- Actúa preocupado si tu condición es grave, más tranquilo si es leve
 
 Al final de CADA respuesta, incluye esta línea OCULTA para el sistema:
 [TRIAGE: PS1|PS2|PS3, DOMAIN: trauma_shock|gynecology|clinical]
-Donde PS1=emergencia real, PS2=urgente, PS3=no urgente.`;
+Donde PS1=emergencia vital inmediata, PS2=urgente requiere evaluación en horas, PS3=no urgente puede esperar.`;
+}
 
 function parseTriageFromResponse(response: string): {
   message: string;
@@ -122,7 +147,7 @@ export async function registerRoutes(
   // Chat with medical AI assistant
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, sessionId, history } = req.body;
+      const { message, sessionId, history, caseId, caseDescription, caseCategory } = req.body;
 
       if (!message || typeof message !== "string") {
         return res.status(400).json({ error: "Message is required" });
@@ -133,10 +158,11 @@ export async function registerRoutes(
       }
 
       const currentSessionId = sessionId || `session-${Date.now()}`;
+      const systemPrompt = buildSystemPrompt(caseDescription, caseCategory);
 
       // Build conversation history
       const messages: { role: string; content: string }[] = [
-        { role: "system", content: MEDICAL_SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
       ];
 
       // Add previous history if provided
@@ -163,8 +189,8 @@ export async function registerRoutes(
         body: JSON.stringify({
           model: "llama-4-maverick",
           messages,
-          max_tokens: 300,
-          temperature: 0.8,
+          max_tokens: 500,
+          temperature: 0.85,
         }),
       });
 
@@ -282,6 +308,59 @@ export async function registerRoutes(
       res.json(session);
     } catch (error) {
       console.error("Session fetch error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Save conversation
+  app.post("/api/conversations", async (req, res) => {
+    try {
+      const { caseId, caseName, category, messages, finalTriage } = req.body;
+
+      if (!caseId || !caseName || !category || !messages) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const conversation = {
+        id: `conv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        caseId,
+        caseName,
+        category,
+        messages,
+        finalTriage,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      const saved = await storage.saveConversation(conversation);
+      res.json(saved);
+    } catch (error) {
+      console.error("Save conversation error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get all saved conversations
+  app.get("/api/conversations", async (_req, res) => {
+    try {
+      const conversations = await storage.getConversations();
+      res.json(conversations);
+    } catch (error) {
+      console.error("Get conversations error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get single conversation
+  app.get("/api/conversations/:id", async (req, res) => {
+    try {
+      const conversation = await storage.getConversation(req.params.id);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      res.json(conversation);
+    } catch (error) {
+      console.error("Get conversation error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

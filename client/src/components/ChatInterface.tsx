@@ -7,8 +7,8 @@ import { VoiceRecorder } from "./VoiceRecorder";
 import { TriageIndicator, TriageLegend } from "./TriageIndicator";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { useToast } from "@/hooks/use-toast";
-import { Info, RotateCcw, Volume2, VolumeX, Stethoscope } from "lucide-react";
-import type { Message, TriagePriority, ClinicalDomain } from "@shared/schema";
+import { Info, RotateCcw, Volume2, VolumeX, Stethoscope, Save } from "lucide-react";
+import type { Message, TriagePriority, ClinicalDomain, ClinicalCase } from "@shared/schema";
 
 const VOICE_OPTIONS = [
   { value: "dora", label: "Dora", description: "Voz femenina cálida" },
@@ -18,7 +18,13 @@ const VOICE_OPTIONS = [
 
 type VoiceOption = typeof VOICE_OPTIONS[number]["value"];
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  selectedCase?: ClinicalCase;
+  onMessagesChange?: (messages: Message[]) => void;
+  onTriageChange?: (triage: TriagePriority | undefined) => void;
+}
+
+export function ChatInterface({ selectedCase, onMessagesChange, onTriageChange }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -43,16 +49,39 @@ export function ChatInterface() {
   }, [messages, isProcessing, isPlayingAudio]);
 
   useEffect(() => {
+    onMessagesChange?.(messages);
+  }, [messages, onMessagesChange]);
+
+  useEffect(() => {
+    onTriageChange?.(currentTriage.priority);
+  }, [currentTriage.priority, onTriageChange]);
+
+  useEffect(() => {
     if (messages.length === 0) {
+      const getWelcomeContent = () => {
+        if (!selectedCase) {
+          return "Hola doctor, buenas tardes. Vengo porque no me siento bien desde hace unos días y ya no aguanto más. ¿Me puede ayudar?";
+        }
+        const greetings = [
+          "Hola doctor, buenas tardes.",
+          "Buenos días doctor.",
+          "Hola doc, gracias por atenderme.",
+          "Doctor, qué bueno que me puede ver.",
+        ];
+        const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+        return `${greeting} Vengo porque me siento muy mal y necesito que me ayude. ¿Puedo contarle lo que me pasa?`;
+      };
+
       const welcomeMessage: Message = {
         id: "welcome",
         role: "assistant",
-        content: "Hola doctor, buenas tardes. Vengo porque no me siento bien desde hace unos días y ya no aguanto más. ¿Me puede ayudar?",
+        content: getWelcomeContent(),
         timestamp: Date.now(),
+        clinicalDomain: selectedCase?.category,
       };
       setMessages([welcomeMessage]);
     }
-  }, [messages.length]);
+  }, [messages.length, selectedCase]);
 
   const playAudio = useCallback(async (audioUrl: string, messageId?: string) => {
     try {
@@ -136,7 +165,10 @@ export function ChatInterface() {
         body: JSON.stringify({
           message: transcribedText,
           sessionId,
-          history: messages.filter(m => m.role !== "system").slice(-10),
+          history: messages.filter(m => m.role !== "system").slice(-20),
+          caseId: selectedCase?.id,
+          caseDescription: selectedCase?.description,
+          caseCategory: selectedCase?.category,
         }),
       });
 
