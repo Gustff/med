@@ -32,6 +32,8 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
   const [sessionId, setSessionId] = useState<string>(() => 
     `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   );
+  const [shouldAutoRecord, setShouldAutoRecord] = useState(false);
+  const [welcomePlayed, setWelcomePlayed] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -69,8 +71,53 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
         clinicalDomain: selectedCase?.category,
       };
       setMessages([welcomeMessage]);
+      
+      // Auto-play welcome message and then start recording
+      if (!welcomePlayed) {
+        setWelcomePlayed(true);
+        // Generate and play welcome audio
+        (async () => {
+          try {
+            const synthesisResponse = await fetch("/api/synthesize", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                text: welcomeMessage.content,
+                voice: selectedVoice,
+              }),
+            });
+
+            if (synthesisResponse.ok) {
+              const audioBlobResponse = await synthesisResponse.blob();
+              const audioUrl = URL.createObjectURL(audioBlobResponse);
+              
+              // Update welcome message with audio
+              setMessages([{ ...welcomeMessage, audioUrl }]);
+              
+              // Play the welcome audio
+              const audio = new Audio(audioUrl);
+              audioRef.current = audio;
+              setIsPlayingAudio(true);
+              setPlayingMessageId(welcomeMessage.id);
+              
+              audio.onended = () => {
+                setIsPlayingAudio(false);
+                setPlayingMessageId(null);
+                // Start recording after welcome
+                setTimeout(() => setShouldAutoRecord(true), 500);
+              };
+              
+              await audio.play();
+            }
+          } catch (error) {
+            console.error("Error playing welcome:", error);
+            // Start recording anyway
+            setTimeout(() => setShouldAutoRecord(true), 1000);
+          }
+        })();
+      }
     }
-  }, [messages.length, selectedCase]);
+  }, [messages.length, selectedCase, welcomePlayed, selectedVoice]);
 
   const playAudio = useCallback(async (audioUrl: string, messageId?: string) => {
     try {
@@ -88,6 +135,8 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
       audio.onended = () => {
         setIsPlayingAudio(false);
         setPlayingMessageId(null);
+        // Auto-start recording after audio finishes
+        setTimeout(() => setShouldAutoRecord(true), 300);
       };
 
       audio.onerror = () => {
@@ -216,6 +265,7 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
   }, [sessionId, messages, autoPlayEnabled, selectedVoice, playAudio, toast]);
 
   const handleRecordingComplete = useCallback((audioBlob: Blob) => {
+    setShouldAutoRecord(false);
     sendMessage("", audioBlob);
   }, [sendMessage]);
 
@@ -342,10 +392,11 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
             onRecordingComplete={handleRecordingComplete}
             isProcessing={isProcessing}
             disabled={isPlayingAudio}
+            autoStart={shouldAutoRecord}
           />
           
           <p className="text-xs text-muted-foreground text-center mt-3">
-            Habla como doctor para interrogar al paciente
+            {isPlayingAudio ? "Escuchando..." : shouldAutoRecord ? "Grabando..." : "Toca para hablar"}
           </p>
         </div>
       </footer>

@@ -7,12 +7,14 @@ interface VoiceRecorderProps {
   onRecordingComplete: (audioBlob: Blob) => void;
   isProcessing?: boolean;
   disabled?: boolean;
+  autoStart?: boolean;
 }
 
 export function VoiceRecorder({ 
   onRecordingComplete, 
   isProcessing = false,
-  disabled = false 
+  disabled = false,
+  autoStart = false
 }: VoiceRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -33,6 +35,13 @@ export function VoiceRecorder({
       }
     };
   }, []);
+
+  // Auto-start recording when autoStart becomes true
+  useEffect(() => {
+    if (autoStart && !isRecording && !isProcessing && !disabled && hasPermission !== false) {
+      startRecording();
+    }
+  }, [autoStart, isRecording, isProcessing, disabled, hasPermission]);
 
   const requestPermission = useCallback(async () => {
     try {

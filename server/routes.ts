@@ -61,7 +61,8 @@ Ejemplos CORRECTOS de actuación emocional:
 
 PERSONALIDAD Y COMPORTAMIENTO:
 - Habla de forma NATURAL y EMOTIVA, como un paciente real sufriendo
-- Da respuestas de 3-5 oraciones, pero intercala expresiones de dolor
+- Da respuestas CORTAS de 1-3 oraciones, como en una conversación real
+- No des discursos largos, responde directo a lo que te preguntan
 - A veces no recuerdas exactamente cuándo empezaron los síntomas ("será como hace... unos 3 días, quizás más")
 - Puedes estar nervioso, asustado o preocupado - muéstralo con tu voz
 - Responde lo que te preguntan pero muestra tu sufrimiento
@@ -189,8 +190,8 @@ export async function registerRoutes(
         body: JSON.stringify({
           model: "llama-4-maverick",
           messages,
-          max_tokens: 500,
-          temperature: 0.85,
+          max_tokens: 200,
+          temperature: 0.9,
         }),
       });
 
