@@ -1,0 +1,125 @@
+🔹 OBJETIVO DEL PROYECTO
+Crear una aplicación web profesional de chat médico por VOZ, enfocada en triaje clínico seguro, orientación médica, y detección temprana de emergencias, sin diagnosticar ni recetar.
+La app debe funcionar como un asistente médico de primera línea, empático, claro y legalmente seguro.
+🗣️ FUNCIONALIDAD PRINCIPAL
+Chat 100 % por voz (voz a texto + texto a voz)
+Lenguaje: Español (LATAM – Perú)
+Interacción natural, calmada y empática
+Enfoque en síntomas, no diagnósticos
+Derivación clara cuando hay riesgo
+🧠 BASE DE CONOCIMIENTO (REFERENCIAL – NO PDFs CRUDOS)
+La IA debe razonar como médico, basada en conocimiento estructurado proveniente de:
+📚 MEDICINA GENERAL
+Harrison – Principios de Medicina Interna
+Cecil – Medicina Interna
+Farreras & Rozman – Medicina Interna (contexto LATAM)
+🩺 SEMIOLOGÍA (CLAVE)
+Argente & Álvarez – Semiología Médica
+Bates – Historia clínica y exploración física
+👉 La IA pregunta mejor, interpreta síntomas, reconoce patrones.
+🚑 URGENCIAS Y TRIAGE
+Tintinalli – Medicina de Emergencias
+Rosen – Emergency Medicine
+👉 Identificación de signos de alarma y emergencias reales.
+👶 PEDIATRÍA
+Nelson – Tratado de Pediatría
+🤰 GINECOLOGÍA Y EMBARAZO
+Williams – Obstetricia
+Novak – Ginecología
+🧠 SALUD MENTAL
+DSM-5-TR (solo orientación)
+Kaplan & Sadock – Psiquiatría
+💊 FARMACOLOGÍA (SIN DOSIS)
+Goodman & Gilman
+Katzung
+👉 Reconocer medicamentos, NO indicar dosis ni tratamientos.
+🌍 GUÍAS CLÍNICAS ACTUALIZADAS
+OMS (WHO)
+CDC
+NICE
+MINSA – Perú
+🧠 ARQUITECTURA DE IA (OBLIGATORIO)
+NO entrenar con PDFs crudos
+Usar:
+Extracción de conocimiento
+Indexación por síntomas
+RAG (Retrieval-Augmented Generation)
+Reglas de seguridad médica
+La IA responde según:
+Síntomas
+Signos vitales
+Contexto (edad, embarazo, trauma)
+🚦 SISTEMA DE TRIAGE CLÍNICO (CORE DEL SISTEMA)
+La IA clasifica TODO en 3 GRANDES DOMINIOS:
+🔴 1. TRAUMA / SHOCK
+Ejemplos:
+Dolor torácico
+Disnea
+Sangrado activo
+Pérdida de conciencia
+Shock
+Evaluación estructurada tipo ABCDE:
+A – Vía aérea
+Edema de lengua
+Laringoespasmo
+Ruido respiratorio
+B – Respiración
+Frecuencia respiratoria
+Saturación O₂
+EtCO₂
+Ruidos pulmonares
+C – Circulación
+FC, PA
+Pulso radial
+Relleno capilar
+D – Neurológico
+Estado de conciencia
+E – Exposición
+Temperatura, glucosa
+👉 Si hay riesgo vital → derivación inmediata a emergencia
+🟣 2. GINECOLOGÍA / EMBARAZO
+Sangrado vaginal
+Dolor pélvico
+Embarazo + dolor
+Fiebre en gestante
+👉 Siempre enfoque conservador + derivación temprana
+🔵 3. HOSPITALIZACIÓN / CLÍNICO
+Fiebre persistente
+Dolor abdominal
+Tos, vómitos, diarrea
+Ansiedad, pánico
+👉 Manejo ambulatorio solo si es seguro
+🚦 NIVELES DE PRIORIDAD (PS)
+PS 1 – Emergencia (vida en riesgo → hospital inmediato)
+PS 2 – Urgente (evaluación médica en horas)
+PS 3 – No urgente (orientación + seguimiento)
+🧪 EJEMPLO DE DATOS CLÍNICOS (INPUT)
+La IA debe poder interpretar datos como:
+Saturación O₂: 98 %
+FR: 13 rpm
+FC: 75 lpm
+PA: 120/80 mmHg
+Temperatura: 37.5 °C
+Glucosa: 70 mg/dL
+Relleno capilar: 2 segundos
+Ritmo: sinusal
+EtCO₂: 40 mmHg
+👉 Y razonar si es estable o no, sin alarmar innecesariamente.
+⚠️ REGLAS DE SEGURIDAD (OBLIGATORIAS)
+❌ No diagnosticar
+❌ No recetar
+❌ No indicar dosis
+✅ Usar lenguaje:
+“Esto no reemplaza una evaluación médica”
+✅ Derivar SIEMPRE ante duda
+✅ Especial cuidado con:
+Niños
+Embarazadas
+Salud mental
+Dolor torácico
+🎙️ UX / DISEÑO
+Interfaz limpia, médica
+Modo voz protagonista
+Indicador visual de nivel de riesgo
+Historial resumido
+Mensajes claros, calmados, humanos
