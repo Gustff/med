@@ -162,7 +162,16 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
 
       if (audioBlob) {
         const formData = new FormData();
-        formData.append("audio", audioBlob, "recording.webm");
+        // Determine correct filename based on blob type
+        let filename = "recording.webm";
+        if (audioBlob.type.includes("mp4") || audioBlob.type.includes("m4a")) {
+          filename = "recording.m4a";
+        } else if (audioBlob.type.includes("ogg")) {
+          filename = "recording.ogg";
+        } else if (audioBlob.type.includes("wav")) {
+          filename = "recording.wav";
+        }
+        formData.append("audio", audioBlob, filename);
         formData.append("language", "es");
 
         // Retry transcription up to 3 times
