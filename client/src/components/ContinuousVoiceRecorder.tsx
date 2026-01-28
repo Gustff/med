@@ -29,11 +29,17 @@ export function ContinuousVoiceRecorder({
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const speakingStartTimeRef = useRef<number | null>(null);
+  const isSpeakingRef = useRef(false);
+  const onRecordingCompleteRef = useRef(onRecordingComplete);
 
-  const SILENCE_THRESHOLD = 25;
-  const SILENCE_DURATION = 400;
-  const MIN_SPEAKING_DURATION = 300;
-  const MAX_RECORDING_TIME = 15000;
+  const SILENCE_THRESHOLD = 20;
+  const SILENCE_DURATION = 500;
+  const MIN_SPEAKING_DURATION = 200;
+  const MAX_RECORDING_TIME = 12000;
+
+  useEffect(() => {
+    onRecordingCompleteRef.current = onRecordingComplete;
+  }, [onRecordingComplete]);
 
   const stopListening = useCallback(() => {
     if (animationFrameRef.current) {
@@ -49,6 +55,7 @@ export function ContinuousVoiceRecorder({
     }
     setIsListening(false);
     setIsSpeaking(false);
+    isSpeakingRef.current = false;
     setAudioLevel(0);
   }, []);
 
@@ -64,41 +71,19 @@ export function ContinuousVoiceRecorder({
     };
   }, [stopListening]);
 
-  useEffect(() => {
-    if (!disabled && !isProcessing && !isPlayingAudio && hasPermission === true && !isListening) {
-      startListening();
-    }
-    if ((isProcessing || isPlayingAudio || disabled) && isListening) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop();
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      setIsListening(false);
-      setIsSpeaking(false);
-    }
-  }, [disabled, isProcessing, isPlayingAudio, hasPermission, isListening]);
-
-  const requestPermission = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      setHasPermission(true);
-      return stream;
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      setHasPermission(false);
-      return null;
-    }
-  }, []);
-
   const startListening = useCallback(async () => {
     let stream = streamRef.current;
 
     if (!stream) {
-      stream = await requestPermission();
-      if (!stream) return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        setHasPermission(true);
+      } catch (error) {
+        console.error("Error accessing microphone:", error);
+        setHasPermission(false);
+        return;
+      }
     }
 
     if (!audioContextRef.current || audioContextRef.current.state === "closed") {
@@ -130,10 +115,14 @@ export function ContinuousVoiceRecorder({
 
     mediaRecorder.onstop = () => {
       const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-      if (audioBlob.size > 1000 && speakingStartTimeRef.current) {
+      console.log("Recording stopped, blob size:", audioBlob.size, "speaking start:", speakingStartTimeRef.current);
+      
+      if (audioBlob.size > 500 && speakingStartTimeRef.current) {
         const speakingDuration = Date.now() - speakingStartTimeRef.current;
+        console.log("Speaking duration:", speakingDuration);
         if (speakingDuration >= MIN_SPEAKING_DURATION) {
-          onRecordingComplete(audioBlob);
+          console.log("Sending audio for transcription");
+          onRecordingCompleteRef.current(audioBlob);
         }
       }
       speakingStartTimeRef.current = null;
@@ -142,6 +131,8 @@ export function ContinuousVoiceRecorder({
 
     mediaRecorder.start(100);
     setIsListening(true);
+    isSpeakingRef.current = false;
+    speakingStartTimeRef.current = null;
 
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
@@ -152,34 +143,43 @@ export function ContinuousVoiceRecorder({
       const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
       setAudioLevel(average);
 
+      const wasSpeaking = isSpeakingRef.current;
+
       if (average > SILENCE_THRESHOLD) {
-        if (!isSpeaking) {
+        if (!wasSpeaking) {
+          console.log("Started speaking, level:", average);
+          isSpeakingRef.current = true;
           setIsSpeaking(true);
           speakingStartTimeRef.current = Date.now();
         }
+        
         if (silenceTimeoutRef.current) {
           clearTimeout(silenceTimeoutRef.current);
           silenceTimeoutRef.current = null;
         }
         
-        // Force send after max recording time
         if (speakingStartTimeRef.current) {
           const elapsed = Date.now() - speakingStartTimeRef.current;
           if (elapsed >= MAX_RECORDING_TIME) {
+            console.log("Max recording time reached, stopping");
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
               mediaRecorderRef.current.stop();
             }
+            isSpeakingRef.current = false;
             setIsSpeaking(false);
             setIsListening(false);
             return;
           }
         }
-      } else if (isSpeaking) {
+      } else if (wasSpeaking) {
         if (!silenceTimeoutRef.current) {
+          console.log("Silence detected, waiting...", SILENCE_DURATION, "ms");
           silenceTimeoutRef.current = setTimeout(() => {
+            console.log("Silence timeout triggered, stopping recording");
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
               mediaRecorderRef.current.stop();
             }
+            isSpeakingRef.current = false;
             setIsSpeaking(false);
             setIsListening(false);
           }, SILENCE_DURATION);
@@ -190,13 +190,42 @@ export function ContinuousVoiceRecorder({
     };
 
     checkAudioLevel();
-  }, [requestPermission, onRecordingComplete, isSpeaking]);
+  }, []);
+
+  useEffect(() => {
+    if (!disabled && !isProcessing && !isPlayingAudio && hasPermission === true && !isListening) {
+      console.log("Auto-starting listening");
+      startListening();
+    }
+    if ((isProcessing || isPlayingAudio || disabled) && isListening) {
+      console.log("Pausing listening");
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+      setIsListening(false);
+      setIsSpeaking(false);
+      isSpeakingRef.current = false;
+    }
+  }, [disabled, isProcessing, isPlayingAudio, hasPermission, isListening, startListening]);
 
   useEffect(() => {
     if (hasPermission === null) {
-      requestPermission();
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          streamRef.current = stream;
+          setHasPermission(true);
+        })
+        .catch(() => setHasPermission(false));
     }
-  }, [hasPermission, requestPermission]);
+  }, [hasPermission]);
 
   if (hasPermission === false) {
     return (
@@ -207,7 +236,14 @@ export function ContinuousVoiceRecorder({
         <p className="text-sm text-muted-foreground text-center">
           Se necesita acceso al micrófono
         </p>
-        <Button variant="outline" onClick={requestPermission} data-testid="button-request-mic-permission">
+        <Button variant="outline" onClick={() => {
+          navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+              streamRef.current = stream;
+              setHasPermission(true);
+            })
+            .catch(() => setHasPermission(false));
+        }} data-testid="button-request-mic-permission">
           Permitir micrófono
         </Button>
       </div>
