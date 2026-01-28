@@ -1,78 +1,54 @@
-# Medical Voice Triage Assistant
+# Asistente Médico - Triaje Clínico por Voz
 
 ## Overview
+Aplicación web profesional de chat médico por VOZ, enfocada en triaje clínico seguro, orientación médica, y detección temprana de emergencias. La app funciona como un asistente médico de primera línea, empático, claro y legalmente seguro.
 
-This is a professional medical voice chat application focused on clinical triage in Spanish (LATAM - Peru). The application provides safe medical orientation through voice interaction, helping users understand their symptoms and determine urgency levels without diagnosing or prescribing medications.
+## Features
+- Chat 100% por voz (voz a texto + texto a voz)
+- Lenguaje: Español (LATAM - Perú)
+- Sistema de triaje con 3 niveles de prioridad (PS1, PS2, PS3)
+- Dominios clínicos: Trauma/Shock, Ginecología, Clínico
+- Modo texto alternativo
+- Reproducción automática de respuestas
+- Interfaz médica profesional con dark mode
 
-Key features:
-- Voice-to-text and text-to-voice chat interface
-- Clinical triage classification (PS1: Emergency, PS2: Urgent, PS3: Non-urgent)
-- Clinical domain categorization (trauma/shock, gynecology, clinical)
-- Empathetic, professional medical guidance in Spanish
-- Emergency detection and immediate referral recommendations
+## Architecture
 
-## User Preferences
+### Frontend (React + Vite)
+- `client/src/components/ChatInterface.tsx` - Interfaz principal de chat
+- `client/src/components/VoiceRecorder.tsx` - Grabación de voz
+- `client/src/components/MessageBubble.tsx` - Burbujas de mensaje
+- `client/src/components/TriageIndicator.tsx` - Indicadores de triaje
+- `client/src/components/VoiceWaveform.tsx` - Visualización de audio
 
-Preferred communication style: Simple, everyday language.
+### Backend (Express)
+- `server/routes.ts` - Rutas API:
+  - `POST /api/transcribe` - Transcripción de audio (Whisper)
+  - `POST /api/chat` - Chat con IA médica
+  - `POST /api/synthesize` - Síntesis de voz (TTS)
 
-## System Architecture
+### Data Models (`shared/schema.ts`)
+- Message: Mensajes de chat con audio y triaje
+- ChatSession: Sesiones de conversación
+- TriagePriority: PS1 (Emergencia), PS2 (Urgente), PS3 (No urgente)
+- ClinicalDomain: trauma_shock, gynecology, clinical
 
-### Frontend Architecture
-- **Framework**: React 18 with TypeScript
-- **Routing**: Wouter (lightweight router)
-- **State Management**: TanStack React Query for server state
-- **UI Components**: shadcn/ui component library built on Radix UI primitives
-- **Styling**: Tailwind CSS with CSS variables for theming (light/dark mode support)
-- **Build Tool**: Vite with custom plugins for Replit integration
+## Environment Variables
+- `LEMONFOX_API_KEY` - API key para servicios de voz y LLM
 
-The frontend follows a component-based architecture with:
-- Pages in `client/src/pages/`
-- Reusable components in `client/src/components/`
-- UI primitives in `client/src/components/ui/`
-- Custom hooks in `client/src/hooks/`
+## Running the Application
+```bash
+npm run dev
+```
 
-### Backend Architecture
-- **Runtime**: Node.js with Express
-- **Language**: TypeScript with ES modules
-- **API Style**: REST endpoints under `/api/`
-- **File Uploads**: Multer for handling audio uploads
+## Triage System
+- **PS1 (Emergencia)**: Riesgo vital - Hospital inmediato
+- **PS2 (Urgente)**: Evaluación médica en horas
+- **PS3 (No urgente)**: Orientación y seguimiento
 
-The backend processes voice recordings, communicates with LemonFox AI API for transcription and medical AI responses, and manages chat sessions.
-
-### Data Storage
-- **Database**: PostgreSQL with Drizzle ORM
-- **Schema Location**: `shared/schema.ts`
-- **Migrations**: Managed via `drizzle-kit push`
-- **Session Storage**: In-memory storage for chat sessions (MemStorage class)
-
-### Shared Code
-- Schema definitions and types shared between frontend and backend in `shared/` directory
-- Zod schemas for runtime validation
-- Type exports for Message, ChatSession, TriagePriority, ClinicalDomain
-
-### Build Process
-- Custom build script in `script/build.ts`
-- Vite builds frontend to `dist/public`
-- esbuild bundles server code to `dist/index.cjs`
-- Selective dependency bundling for optimized cold starts
-
-## External Dependencies
-
-### AI/ML Services
-- **LemonFox AI API**: Used for speech-to-text transcription and AI chat responses
-  - Requires `LEMONFOX_API_KEY` environment variable
-  - Base URL: `https://api.lemonfox.ai/v1`
-
-### Database
-- **PostgreSQL**: Primary database
-  - Requires `DATABASE_URL` environment variable
-  - Uses Drizzle ORM for type-safe queries
-  - connect-pg-simple for session management
-
-### Key NPM Packages
-- `@tanstack/react-query`: Server state management
-- `drizzle-orm` / `drizzle-zod`: Database ORM and schema validation
-- `zod`: Runtime type validation
-- `express`: HTTP server framework
-- `multer`: Multipart form data handling for audio uploads
-- Radix UI primitives: Accessible UI components
+## Safety Rules
+- NO diagnostica enfermedades
+- NO receta medicamentos ni dosis
+- NO indica tratamientos específicos
+- Siempre deriva ante duda sobre riesgo vital
+- Especial cuidado con: niños, embarazadas, salud mental, dolor torácico
