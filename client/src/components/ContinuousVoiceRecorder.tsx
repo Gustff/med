@@ -115,24 +115,26 @@ export function ContinuousVoiceRecorder({
 
     mediaRecorder.onstop = () => {
       const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-      console.log("Recording stopped, blob size:", audioBlob.size, "speaking start:", speakingStartTimeRef.current);
+      const speakingStart = speakingStartTimeRef.current;
+      console.log("Recording stopped, blob size:", audioBlob.size, "speaking start:", speakingStart);
       
-      if (audioBlob.size > 500 && speakingStartTimeRef.current) {
-        const speakingDuration = Date.now() - speakingStartTimeRef.current;
+      // Reset immediately so next recording can start fresh
+      speakingStartTimeRef.current = null;
+      audioChunksRef.current = [];
+      
+      if (audioBlob.size > 500 && speakingStart) {
+        const speakingDuration = Date.now() - speakingStart;
         console.log("Speaking duration:", speakingDuration);
         if (speakingDuration >= MIN_SPEAKING_DURATION) {
           console.log("Sending audio for transcription");
           onRecordingCompleteRef.current(audioBlob);
         }
       }
-      speakingStartTimeRef.current = null;
-      audioChunksRef.current = [];
     };
 
     mediaRecorder.start(100);
     setIsListening(true);
     isSpeakingRef.current = false;
-    speakingStartTimeRef.current = null;
 
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
@@ -174,8 +176,10 @@ export function ContinuousVoiceRecorder({
       } else if (wasSpeaking) {
         if (!silenceTimeoutRef.current) {
           console.log("Silence detected, waiting...", SILENCE_DURATION, "ms");
+          const savedStartTime = speakingStartTimeRef.current;
           silenceTimeoutRef.current = setTimeout(() => {
-            console.log("Silence timeout triggered, stopping recording");
+            console.log("Silence timeout triggered, stopping recording, savedStart:", savedStartTime);
+            speakingStartTimeRef.current = savedStartTime;
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
               mediaRecorderRef.current.stop();
             }
