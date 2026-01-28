@@ -1,37 +1,49 @@
-import { type User, type InsertUser } from "@shared/schema";
+import type { Message, ChatSession } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getSession(id: string): Promise<ChatSession | undefined>;
+  createSession(id: string): Promise<ChatSession>;
+  updateSession(session: ChatSession): Promise<ChatSession>;
+  addMessageToSession(sessionId: string, message: Message): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private sessions: Map<string, ChatSession>;
 
   constructor() {
-    this.users = new Map();
+    this.sessions = new Map();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getSession(id: string): Promise<ChatSession | undefined> {
+    return this.sessions.get(id);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createSession(id: string): Promise<ChatSession> {
+    const session: ChatSession = {
+      id,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    this.sessions.set(id, session);
+    return session;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateSession(session: ChatSession): Promise<ChatSession> {
+    session.updatedAt = Date.now();
+    this.sessions.set(session.id, session);
+    return session;
+  }
+
+  async addMessageToSession(sessionId: string, message: Message): Promise<void> {
+    let session = await this.getSession(sessionId);
+    if (!session) {
+      session = await this.createSession(sessionId);
+    }
+    session.messages.push(message);
+    session.updatedAt = Date.now();
+    this.sessions.set(sessionId, session);
   }
 }
 
