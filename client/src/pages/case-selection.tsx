@@ -293,8 +293,8 @@ export default function CaseSelection() {
       </div>
 
       <Dialog open={!!viewingConversation} onOpenChange={() => setViewingConversation(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="pb-2 border-b">
+        <DialogContent className="max-w-2xl h-[85vh] flex flex-col">
+          <DialogHeader className="pb-2 border-b flex-shrink-0">
             <div className="flex items-center justify-between gap-2">
               <DialogTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" />
@@ -317,8 +317,8 @@ export default function CaseSelection() {
             )}
           </DialogHeader>
           
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-3 py-4 pr-4">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="space-y-3 py-4 pr-2">
               {viewingConversation?.messages.map((message, index) => (
                 <div
                   key={message.id || index}
@@ -350,9 +350,9 @@ export default function CaseSelection() {
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
 
-          <div className="flex justify-between gap-2 pt-4 border-t">
+          <div className="flex justify-between gap-2 pt-4 border-t flex-shrink-0">
             <Button 
               variant="destructive" 
               onClick={() => {
