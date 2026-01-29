@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Stethoscope, Heart, Baby, Activity, ArrowRight, AlertTriangle, Clock, CheckCircle } from "lucide-react";
-import { CLINICAL_CASES, type ClinicalCase, type ClinicalDomain } from "@shared/schema";
+import { Stethoscope, Baby, Activity, ArrowRight, AlertTriangle, Clock, History, MessageSquare } from "lucide-react";
+import { CLINICAL_CASES, type ClinicalCase, type ClinicalDomain, type SavedConversation } from "@shared/schema";
 
 const CATEGORY_INFO: Record<ClinicalDomain, { label: string; icon: typeof Stethoscope; color: string; bgColor: string }> = {
   trauma_shock: { 
@@ -32,6 +33,10 @@ const CATEGORY_INFO: Record<ClinicalDomain, { label: string; icon: typeof Stetho
 export default function CaseSelection() {
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<ClinicalDomain | null>(null);
+
+  const { data: savedConversations = [] } = useQuery<SavedConversation[]>({
+    queryKey: ["/api/conversations"],
+  });
 
   const traumaCases = CLINICAL_CASES.filter(c => c.category === "trauma_shock");
   const gynCases = CLINICAL_CASES.filter(c => c.category === "gynecology");
@@ -167,6 +172,66 @@ export default function CaseSelection() {
             </div>
           </div>
         </div>
+
+        <Card className="mt-8">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <History className="w-5 h-5" />
+                Historial de Conversaciones
+              </CardTitle>
+              <Badge variant="secondary">{savedConversations.length} guardadas</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {savedConversations.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No hay conversaciones guardadas. Practica un caso y guarda tu progreso.
+              </p>
+            ) : (
+              <ScrollArea className="h-[250px] pr-4">
+                <div className="space-y-2">
+                  {savedConversations.map((conv) => {
+                    const categoryInfo = CATEGORY_INFO[conv.category];
+                    const CategoryIcon = categoryInfo.icon;
+                    const date = new Date(conv.createdAt);
+                    const formattedDate = date.toLocaleDateString("es-PE", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                    
+                    return (
+                      <div
+                        key={conv.id}
+                        className="flex items-center justify-between p-3 rounded-md border hover-elevate cursor-pointer group"
+                        onClick={() => setLocation(`/simulation/${conv.caseId}`)}
+                        data-testid={`history-item-${conv.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-1.5 rounded-md ${categoryInfo.bgColor}`}>
+                            <CategoryIcon className={`w-4 h-4 ${categoryInfo.color}`} />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{conv.caseName}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <MessageSquare className="w-3 h-3" />
+                              <span>{conv.messages.length} mensajes</span>
+                              <span>•</span>
+                              <span>{formattedDate}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
