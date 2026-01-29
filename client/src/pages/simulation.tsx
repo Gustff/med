@@ -118,9 +118,15 @@ export default function Simulation() {
         if (response.ok) {
           // Invalidate conversations cache so home page shows updated data
           queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+          
+          // Show summary of what was saved
+          const messageCount = currentMessages.length;
+          const lastMessage = currentMessages[currentMessages.length - 1];
+          const preview = lastMessage?.content.substring(0, 50) + (lastMessage?.content.length > 50 ? "..." : "");
+          
           toast({
             title: "Consulta finalizada y guardada",
-            description: "Tu conversación se ha guardado correctamente.",
+            description: `${messageCount} mensajes guardados. Último: "${preview}"`,
           });
         } else {
           throw new Error("Error al guardar");
