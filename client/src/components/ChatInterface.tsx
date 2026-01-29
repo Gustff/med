@@ -20,9 +20,10 @@ type VoiceOption = typeof VOICE_OPTIONS[number]["value"];
 interface ChatInterfaceProps {
   selectedCase?: ClinicalCase;
   onMessagesChange?: (messages: Message[]) => void;
+  isSessionEnded?: boolean;
 }
 
-export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceProps) {
+export function ChatInterface({ selectedCase, onMessagesChange, isSessionEnded = false }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -45,6 +46,16 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
   useEffect(() => {
     onMessagesChange?.(messages);
   }, [messages, onMessagesChange]);
+
+  // Stop audio when session ends
+  useEffect(() => {
+    if (isSessionEnded && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setIsPlayingAudio(false);
+      setPlayingMessageId(null);
+    }
+  }, [isSessionEnded]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -389,38 +400,52 @@ export function ChatInterface({ selectedCase, onMessagesChange }: ChatInterfaceP
 
       <footer className="flex-shrink-0 border-t border-border bg-card p-4">
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <span className="text-xs text-muted-foreground">Voz del paciente:</span>
-            <Select 
-              value={selectedVoice} 
-              onValueChange={(value) => setSelectedVoice(value as VoiceOption)}
-            >
-              <SelectTrigger 
-                className="w-32 h-8 text-sm"
-                data-testid="select-voice"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VOICE_OPTIONS.map((voice) => (
-                  <SelectItem 
-                    key={voice.value} 
-                    value={voice.value}
-                    data-testid={`option-voice-${voice.value}`}
+          {isSessionEnded ? (
+            <div className="text-center py-4" data-testid="session-ended">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted">
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="text-sm font-medium">Consulta finalizada</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                La conversación ha terminado
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <span className="text-xs text-muted-foreground">Voz del paciente:</span>
+                <Select 
+                  value={selectedVoice} 
+                  onValueChange={(value) => setSelectedVoice(value as VoiceOption)}
+                >
+                  <SelectTrigger 
+                    className="w-32 h-8 text-sm"
+                    data-testid="select-voice"
                   >
-                    {voice.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <ContinuousVoiceRecorder
-            onRecordingComplete={handleRecordingComplete}
-            isProcessing={isProcessing}
-            disabled={false}
-            isPlayingAudio={isPlayingAudio}
-          />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VOICE_OPTIONS.map((voice) => (
+                      <SelectItem 
+                        key={voice.value} 
+                        value={voice.value}
+                        data-testid={`option-voice-${voice.value}`}
+                      >
+                        {voice.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <ContinuousVoiceRecorder
+                onRecordingComplete={handleRecordingComplete}
+                isProcessing={isProcessing}
+                disabled={false}
+                isPlayingAudio={isPlayingAudio}
+              />
+            </>
+          )}
         </div>
       </footer>
     </div>

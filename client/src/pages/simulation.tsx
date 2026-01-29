@@ -31,6 +31,7 @@ export default function Simulation() {
   const [isSaving, setIsSaving] = useState(false);
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
   const [showEndDialog, setShowEndDialog] = useState(false);
+  const [isSessionEnded, setIsSessionEnded] = useState(false);
   
   const selectedCase = CLINICAL_CASES.find(c => c.id === params.caseId);
   
@@ -91,6 +92,7 @@ export default function Simulation() {
 
   const handleEndConversation = async (shouldSave: boolean) => {
     setShowEndDialog(false);
+    setIsSessionEnded(true);
     
     if (shouldSave && currentMessages.length >= 2) {
       await handleSaveConversation();
@@ -100,8 +102,6 @@ export default function Simulation() {
       title: "Consulta finalizada",
       description: shouldSave ? "Tu conversación ha sido guardada." : "Has terminado la consulta.",
     });
-    
-    setLocation("/");
   };
 
   const categoryInfo = CATEGORY_INFO[selectedCase.category];
@@ -131,25 +131,39 @@ export default function Simulation() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleSaveConversation}
-              disabled={isSaving || currentMessages.length < 2}
-              data-testid="button-save"
-            >
-              <Save className="w-4 h-4 mr-1" />
-              {isSaving ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={() => setShowEndDialog(true)}
-              data-testid="button-end"
-            >
-              <LogOut className="w-4 h-4 mr-1" />
-              Terminar
-            </Button>
+            {isSessionEnded ? (
+              <Button 
+                variant="default" 
+                size="sm"
+                onClick={() => setLocation("/")}
+                data-testid="button-back-home"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Volver al inicio
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleSaveConversation}
+                  disabled={isSaving || currentMessages.length < 2}
+                  data-testid="button-save"
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  {isSaving ? "Guardando..." : "Guardar"}
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setShowEndDialog(true)}
+                  data-testid="button-end"
+                >
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Terminar
+                </Button>
+              </>
+            )}
             <ThemeToggle />
           </div>
         </div>
@@ -159,6 +173,7 @@ export default function Simulation() {
         <ChatInterface 
           selectedCase={selectedCase}
           onMessagesChange={setCurrentMessages}
+          isSessionEnded={isSessionEnded}
         />
       </main>
 
