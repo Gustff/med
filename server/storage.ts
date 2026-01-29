@@ -1,4 +1,4 @@
-import type { Message, ChatSession, SavedConversation } from "@shared/schema";
+import type { Message, ChatSession, SavedConversation, UsageStats } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -10,15 +10,27 @@ export interface IStorage {
   getConversations(): Promise<SavedConversation[]>;
   getConversation(id: string): Promise<SavedConversation | undefined>;
   deleteConversation(id: string): Promise<boolean>;
+  getUsageStats(): Promise<UsageStats>;
+  addUsageMinutes(minutes: number): Promise<UsageStats>;
 }
 
 export class MemStorage implements IStorage {
   private sessions: Map<string, ChatSession>;
   private savedConversations: Map<string, SavedConversation>;
+  private usageStats: UsageStats;
 
   constructor() {
     this.sessions = new Map();
     this.savedConversations = new Map();
+    // Initialize usage stats with 500 hours (30000 minutes) limit per 30 days
+    const now = Date.now();
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    this.usageStats = {
+      usedMinutes: 0,
+      limitMinutes: 30000, // 500 hours
+      periodStartDate: now,
+      periodEndDate: now + thirtyDaysMs,
+    };
   }
 
   async getSession(id: string): Promise<ChatSession | undefined> {
@@ -67,6 +79,27 @@ export class MemStorage implements IStorage {
 
   async deleteConversation(id: string): Promise<boolean> {
     return this.savedConversations.delete(id);
+  }
+
+  async getUsageStats(): Promise<UsageStats> {
+    // Check if period has expired and reset if needed
+    const now = Date.now();
+    if (now > this.usageStats.periodEndDate) {
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      this.usageStats = {
+        usedMinutes: 0,
+        limitMinutes: 30000,
+        periodStartDate: now,
+        periodEndDate: now + thirtyDaysMs,
+      };
+    }
+    return this.usageStats;
+  }
+
+  async addUsageMinutes(minutes: number): Promise<UsageStats> {
+    await this.getUsageStats(); // This will reset if period expired
+    this.usageStats.usedMinutes += minutes;
+    return this.usageStats;
   }
 }
 

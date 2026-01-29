@@ -381,5 +381,31 @@ export async function registerRoutes(
     }
   });
 
+  // Get usage stats
+  app.get("/api/usage", async (_req, res) => {
+    try {
+      const stats = await storage.getUsageStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Get usage error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Add usage minutes
+  app.post("/api/usage", async (req, res) => {
+    try {
+      const { minutes } = req.body;
+      if (typeof minutes !== "number" || minutes < 0) {
+        return res.status(400).json({ error: "Invalid minutes value" });
+      }
+      const stats = await storage.addUsageMinutes(minutes);
+      res.json(stats);
+    } catch (error) {
+      console.error("Add usage error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }

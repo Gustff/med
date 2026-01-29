@@ -12,8 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Stethoscope, Baby, Activity, ArrowRight, AlertTriangle, Clock, History, MessageSquare, User, Bot, Trash2, Eye } from "lucide-react";
-import { CLINICAL_CASES, type ClinicalCase, type ClinicalDomain, type SavedConversation } from "@shared/schema";
+import { Stethoscope, Baby, Activity, ArrowRight, AlertTriangle, Clock, History, MessageSquare, User, Bot, Trash2, Eye, Timer } from "lucide-react";
+import { CLINICAL_CASES, type ClinicalCase, type ClinicalDomain, type SavedConversation, type UsageStats } from "@shared/schema";
+import { Progress } from "@/components/ui/progress";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,6 +48,16 @@ export default function CaseSelection() {
   const { data: savedConversations = [] } = useQuery<SavedConversation[]>({
     queryKey: ["/api/conversations"],
   });
+
+  const { data: usageStats } = useQuery<UsageStats>({
+    queryKey: ["/api/usage"],
+  });
+
+  // Calculate usage percentage and display values
+  const usedHours = usageStats ? Math.round(usageStats.usedMinutes / 60 * 10) / 10 : 0;
+  const limitHours = usageStats ? usageStats.limitMinutes / 60 : 500;
+  const usagePercent = usageStats ? Math.min((usageStats.usedMinutes / usageStats.limitMinutes) * 100, 100) : 0;
+  const daysRemaining = usageStats ? Math.max(0, Math.ceil((usageStats.periodEndDate - Date.now()) / (1000 * 60 * 60 * 24))) : 30;
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -131,9 +142,26 @@ export default function CaseSelection() {
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2">Simulador de Pacientes</h1>
-          <p className="text-muted-foreground max-w-lg mx-auto">
+          <p className="text-muted-foreground max-w-lg mx-auto mb-6">
             Selecciona una categoría y un caso clínico para comenzar tu entrenamiento de triaje
           </p>
+
+          <div className="max-w-md mx-auto bg-muted/50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Timer className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Uso mensual</span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {daysRemaining} días restantes
+              </span>
+            </div>
+            <Progress value={usagePercent} className="h-3 mb-2" />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{usedHours} horas usadas</span>
+              <span>Límite: {limitHours} horas / 30 días</span>
+            </div>
+          </div>
         </header>
 
         <div className="grid md:grid-cols-3 gap-4 mb-8">

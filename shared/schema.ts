@@ -164,6 +164,16 @@ export const synthesisRequestSchema = z.object({
 
 export type SynthesisRequest = z.infer<typeof synthesisRequestSchema>;
 
+// Usage tracking schema
+export const usageStatsSchema = z.object({
+  usedMinutes: z.number(),
+  limitMinutes: z.number(), // 500 hours = 30000 minutes
+  periodStartDate: z.number(),
+  periodEndDate: z.number(),
+});
+
+export type UsageStats = z.infer<typeof usageStatsSchema>;
+
 // User schema (keeping existing for compatibility)
 export const insertUserSchema = z.object({
   username: z.string(),
