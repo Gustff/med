@@ -21,9 +21,10 @@ interface ChatInterfaceProps {
   selectedCase?: ClinicalCase;
   onMessagesChange?: (messages: Message[]) => void;
   isSessionEnded?: boolean;
+  isSaving?: boolean;
 }
 
-export function ChatInterface({ selectedCase, onMessagesChange, isSessionEnded = false }: ChatInterfaceProps) {
+export function ChatInterface({ selectedCase, onMessagesChange, isSessionEnded = false, isSaving = false }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -403,11 +404,20 @@ export function ChatInterface({ selectedCase, onMessagesChange, isSessionEnded =
           {isSessionEnded ? (
             <div className="text-center py-4" data-testid="session-ended">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted">
-                <div className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-sm font-medium">Consulta finalizada</span>
+                {isSaving ? (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                    <span className="text-sm font-medium">Guardando conversación...</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="text-sm font-medium">Consulta finalizada</span>
+                  </>
+                )}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                La conversación ha terminado
+                {isSaving ? "Por favor espera..." : "La conversación ha terminado"}
               </p>
             </div>
           ) : (

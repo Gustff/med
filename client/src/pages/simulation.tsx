@@ -92,16 +92,50 @@ export default function Simulation() {
 
   const handleEndConversation = async (shouldSave: boolean) => {
     setShowEndDialog(false);
+    
+    // First, end the session to stop recording immediately
     setIsSessionEnded(true);
     
-    if (shouldSave && currentMessages.length >= 2) {
-      await handleSaveConversation();
-    }
+    // Small delay to ensure recording stops
+    await new Promise(resolve => setTimeout(resolve, 100));
     
-    toast({
-      title: "Consulta finalizada",
-      description: shouldSave ? "Tu conversación ha sido guardada." : "Has terminado la consulta.",
-    });
+    if (shouldSave && currentMessages.length >= 2) {
+      setIsSaving(true);
+      try {
+        const response = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            caseId: selectedCase.id,
+            caseName: selectedCase.name,
+            category: selectedCase.category,
+            messages: currentMessages,
+          }),
+        });
+
+        if (response.ok) {
+          toast({
+            title: "Consulta finalizada y guardada",
+            description: "Tu conversación se ha guardado correctamente.",
+          });
+        } else {
+          throw new Error("Error al guardar");
+        }
+      } catch (error) {
+        toast({
+          title: "Error al guardar",
+          description: "La consulta terminó pero no se pudo guardar.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      toast({
+        title: "Consulta finalizada",
+        description: "Has terminado la consulta.",
+      });
+    }
   };
 
   const categoryInfo = CATEGORY_INFO[selectedCase.category];
@@ -174,6 +208,7 @@ export default function Simulation() {
           selectedCase={selectedCase}
           onMessagesChange={setCurrentMessages}
           isSessionEnded={isSessionEnded}
+          isSaving={isSaving}
         />
       </main>
 
