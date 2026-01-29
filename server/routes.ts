@@ -367,5 +367,19 @@ export async function registerRoutes(
     }
   });
 
+  // Delete conversation
+  app.delete("/api/conversations/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteConversation(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete conversation error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }

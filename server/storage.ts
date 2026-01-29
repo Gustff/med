@@ -9,6 +9,7 @@ export interface IStorage {
   saveConversation(conversation: SavedConversation): Promise<SavedConversation>;
   getConversations(): Promise<SavedConversation[]>;
   getConversation(id: string): Promise<SavedConversation | undefined>;
+  deleteConversation(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -62,6 +63,10 @@ export class MemStorage implements IStorage {
 
   async getConversation(id: string): Promise<SavedConversation | undefined> {
     return this.savedConversations.get(id);
+  }
+
+  async deleteConversation(id: string): Promise<boolean> {
+    return this.savedConversations.delete(id);
   }
 }
 

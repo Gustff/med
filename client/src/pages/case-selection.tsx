@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Stethoscope, Baby, Activity, ArrowRight, AlertTriangle, Clock, History, MessageSquare, User, Bot, X } from "lucide-react";
+import { Stethoscope, Baby, Activity, ArrowRight, AlertTriangle, Clock, History, MessageSquare, User, Bot, Trash2, Eye } from "lucide-react";
 import { CLINICAL_CASES, type ClinicalCase, type ClinicalDomain, type SavedConversation } from "@shared/schema";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const CATEGORY_INFO: Record<ClinicalDomain, { label: string; icon: typeof Stethoscope; color: string; bgColor: string }> = {
   trauma_shock: { 
@@ -40,9 +42,31 @@ export default function CaseSelection() {
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<ClinicalDomain | null>(null);
   const [viewingConversation, setViewingConversation] = useState<SavedConversation | null>(null);
+  const { toast } = useToast();
 
   const { data: savedConversations = [] } = useQuery<SavedConversation[]>({
     queryKey: ["/api/conversations"],
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/conversations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      setViewingConversation(null);
+      toast({
+        title: "Conversación eliminada",
+        description: "Se ha eliminado la conversación del historial",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la conversación",
+        variant: "destructive",
+      });
+    },
   });
 
   const traumaCases = CLINICAL_CASES.filter(c => c.category === "trauma_shock");
@@ -212,11 +236,13 @@ export default function CaseSelection() {
                     return (
                       <div
                         key={conv.id}
-                        className="flex items-center justify-between p-3 rounded-md border hover-elevate cursor-pointer group"
-                        onClick={() => setViewingConversation(conv)}
+                        className="flex items-center justify-between p-3 rounded-md border hover-elevate group"
                         data-testid={`history-item-${conv.id}`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div 
+                          className="flex items-center gap-3 flex-1 cursor-pointer"
+                          onClick={() => setViewingConversation(conv)}
+                        >
                           <div className={`p-1.5 rounded-md ${categoryInfo.bgColor}`}>
                             <CategoryIcon className={`w-4 h-4 ${categoryInfo.color}`} />
                           </div>
@@ -230,7 +256,32 @@ export default function CaseSelection() {
                             </div>
                           </div>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingConversation(conv);
+                            }}
+                            data-testid={`button-view-${conv.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteMutation.mutate(conv.id);
+                            }}
+                            data-testid={`button-delete-${conv.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
@@ -242,22 +293,38 @@ export default function CaseSelection() {
       </div>
 
       <Dialog open={!!viewingConversation} onOpenChange={() => setViewingConversation(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              {viewingConversation?.caseName}
-            </DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="pb-2 border-b">
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                {viewingConversation?.caseName}
+              </DialogTitle>
+              <Badge variant="secondary">
+                {viewingConversation?.messages.length} mensajes
+              </Badge>
+            </div>
+            {viewingConversation && (
+              <p className="text-sm text-muted-foreground">
+                {new Date(viewingConversation.createdAt).toLocaleDateString("es-PE", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            )}
           </DialogHeader>
           
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-4 py-4">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-3 py-4 pr-4">
               {viewingConversation?.messages.map((message, index) => (
                 <div
                   key={message.id || index}
                   className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
                     message.role === "user" 
                       ? "bg-primary text-primary-foreground" 
                       : "bg-muted"
@@ -268,41 +335,56 @@ export default function CaseSelection() {
                       <Bot className="w-4 h-4" />
                     )}
                   </div>
-                  <div className={`max-w-[80%] rounded-lg p-3 ${
+                  <div className={`max-w-[85%] rounded-lg px-4 py-3 ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted"
                   }`}>
-                    <p className="text-sm">{message.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                    <p className={`text-xs font-medium mb-1 ${
+                      message.role === "user" ? "text-primary-foreground/80" : "text-muted-foreground"
                     }`}>
-                      {message.role === "user" ? "Doctor" : "Paciente"}
+                      {message.role === "user" ? "Doctor (tú)" : "Paciente"}
                     </p>
+                    <p className="text-sm leading-relaxed">{message.content}</p>
                   </div>
                 </div>
               ))}
             </div>
           </ScrollArea>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-between gap-2 pt-4 border-t">
             <Button 
-              variant="outline" 
-              onClick={() => setViewingConversation(null)}
-              data-testid="button-close-conversation"
-            >
-              Cerrar
-            </Button>
-            <Button 
+              variant="destructive" 
               onClick={() => {
                 if (viewingConversation) {
-                  setLocation(`/simulation/${viewingConversation.caseId}`);
+                  deleteMutation.mutate(viewingConversation.id);
                 }
               }}
-              data-testid="button-practice-again"
+              disabled={deleteMutation.isPending}
+              data-testid="button-delete-conversation"
             >
-              Practicar de nuevo
+              <Trash2 className="w-4 h-4 mr-2" />
+              Eliminar
             </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setViewingConversation(null)}
+                data-testid="button-close-conversation"
+              >
+                Cerrar
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (viewingConversation) {
+                    setLocation(`/simulation/${viewingConversation.caseId}`);
+                  }
+                }}
+                data-testid="button-practice-again"
+              >
+                Practicar de nuevo
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
