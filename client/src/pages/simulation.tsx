@@ -5,7 +5,17 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, AlertTriangle, Baby, Activity, Save } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Baby, Activity, Save, LogOut } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CLINICAL_CASES, type ClinicalDomain, type Message } from "@shared/schema";
 
 const CATEGORY_INFO: Record<ClinicalDomain, { label: string; icon: typeof AlertTriangle; color: string }> = {
@@ -20,6 +30,7 @@ export default function Simulation() {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
+  const [showEndDialog, setShowEndDialog] = useState(false);
   
   const selectedCase = CLINICAL_CASES.find(c => c.id === params.caseId);
   
@@ -78,6 +89,21 @@ export default function Simulation() {
     }
   };
 
+  const handleEndConversation = async (shouldSave: boolean) => {
+    setShowEndDialog(false);
+    
+    if (shouldSave && currentMessages.length >= 2) {
+      await handleSaveConversation();
+    }
+    
+    toast({
+      title: "Consulta finalizada",
+      description: shouldSave ? "Tu conversación ha sido guardada." : "Has terminado la consulta.",
+    });
+    
+    setLocation("/");
+  };
+
   const categoryInfo = CATEGORY_INFO[selectedCase.category];
   const CategoryIcon = categoryInfo.icon;
 
@@ -115,6 +141,15 @@ export default function Simulation() {
               <Save className="w-4 h-4 mr-1" />
               {isSaving ? "Guardando..." : "Guardar"}
             </Button>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={() => setShowEndDialog(true)}
+              data-testid="button-end"
+            >
+              <LogOut className="w-4 h-4 mr-1" />
+              Terminar
+            </Button>
             <ThemeToggle />
           </div>
         </div>
@@ -126,6 +161,47 @@ export default function Simulation() {
           onMessagesChange={setCurrentMessages}
         />
       </main>
+
+      <AlertDialog open={showEndDialog} onOpenChange={setShowEndDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Terminar consulta</AlertDialogTitle>
+            <AlertDialogDescription>
+              {currentMessages.length >= 2 
+                ? "¿Deseas guardar esta conversación antes de terminar?"
+                : "¿Estás seguro que deseas terminar la consulta?"
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-end">Cancelar</AlertDialogCancel>
+            {currentMessages.length >= 2 ? (
+              <>
+                <AlertDialogAction 
+                  onClick={() => handleEndConversation(false)}
+                  className="bg-muted text-foreground hover:bg-muted/80"
+                  data-testid="button-end-no-save"
+                >
+                  Terminar sin guardar
+                </AlertDialogAction>
+                <AlertDialogAction 
+                  onClick={() => handleEndConversation(true)}
+                  data-testid="button-end-save"
+                >
+                  Guardar y terminar
+                </AlertDialogAction>
+              </>
+            ) : (
+              <AlertDialogAction 
+                onClick={() => handleEndConversation(false)}
+                data-testid="button-confirm-end"
+              >
+                Terminar
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
