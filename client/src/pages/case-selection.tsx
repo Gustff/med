@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Stethoscope, Baby, Activity, ArrowRight, AlertTriangle, Clock, History, MessageSquare } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Stethoscope, Baby, Activity, ArrowRight, AlertTriangle, Clock, History, MessageSquare, User, Bot, X } from "lucide-react";
 import { CLINICAL_CASES, type ClinicalCase, type ClinicalDomain, type SavedConversation } from "@shared/schema";
 
 const CATEGORY_INFO: Record<ClinicalDomain, { label: string; icon: typeof Stethoscope; color: string; bgColor: string }> = {
@@ -33,6 +39,7 @@ const CATEGORY_INFO: Record<ClinicalDomain, { label: string; icon: typeof Stetho
 export default function CaseSelection() {
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<ClinicalDomain | null>(null);
+  const [viewingConversation, setViewingConversation] = useState<SavedConversation | null>(null);
 
   const { data: savedConversations = [] } = useQuery<SavedConversation[]>({
     queryKey: ["/api/conversations"],
@@ -206,7 +213,7 @@ export default function CaseSelection() {
                       <div
                         key={conv.id}
                         className="flex items-center justify-between p-3 rounded-md border hover-elevate cursor-pointer group"
-                        onClick={() => setLocation(`/simulation/${conv.caseId}`)}
+                        onClick={() => setViewingConversation(conv)}
                         data-testid={`history-item-${conv.id}`}
                       >
                         <div className="flex items-center gap-3">
@@ -233,6 +240,72 @@ export default function CaseSelection() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!viewingConversation} onOpenChange={() => setViewingConversation(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              {viewingConversation?.caseName}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-4 py-4">
+              {viewingConversation?.messages.map((message, index) => (
+                <div
+                  key={message.id || index}
+                  className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    message.role === "user" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-muted"
+                  }`}>
+                    {message.role === "user" ? (
+                      <User className="w-4 h-4" />
+                    ) : (
+                      <Bot className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className={`max-w-[80%] rounded-lg p-3 ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  }`}>
+                    <p className="text-sm">{message.content}</p>
+                    <p className={`text-xs mt-1 ${
+                      message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                    }`}>
+                      {message.role === "user" ? "Doctor" : "Paciente"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => setViewingConversation(null)}
+              data-testid="button-close-conversation"
+            >
+              Cerrar
+            </Button>
+            <Button 
+              onClick={() => {
+                if (viewingConversation) {
+                  setLocation(`/simulation/${viewingConversation.caseId}`);
+                }
+              }}
+              data-testid="button-practice-again"
+            >
+              Practicar de nuevo
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
