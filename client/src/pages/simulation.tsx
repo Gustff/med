@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChatInterface } from "@/components/ChatInterface";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export default function Simulation() {
   const params = useParams<{ caseId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
   const [showEndDialog, setShowEndDialog] = useState(false);
@@ -114,6 +116,8 @@ export default function Simulation() {
         });
 
         if (response.ok) {
+          // Invalidate conversations cache so home page shows updated data
+          queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
           toast({
             title: "Consulta finalizada y guardada",
             description: "Tu conversación se ha guardado correctamente.",
